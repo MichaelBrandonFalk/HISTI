@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HISTI V1.1</title>
+    <meta name="description" content="Honey I Shrunk The Images converts 3840x2160 JPG files into 1920x1080 JPG copies in bulk.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">HISTI <span data-version>V1.1</span></p>
+          <h1>Honey I Shrunk The Images</h1>
+        </div>
+        <a class="button-link" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.1/HISTI%20V1_1.zip">Download V1.1</a>
+      </header>
+
+      <main class="workspace">
+        <section class="toolbar" aria-label="Image actions">
+          <div class="actions">
+            <input id="file-input" class="file-input" type="file" accept=".jpg,.jpeg,image/jpeg" multiple>
+            <button id="pick-button" class="secondary-action" type="button">Select JPGs</button>
+            <button id="process-button" class="primary-action" type="button" disabled>Process</button>
+            <button id="download-all-button" class="secondary-action" type="button" disabled>Download</button>
+            <button id="clear-button" class="secondary-action" type="button">Clear</button>
+          </div>
+          <p id="status-line" class="status-line" aria-live="polite">Select one or more JPG files.</p>
+        </section>
+
+        <section class="tool-layout">
+          <div class="input-panel">
+            <div id="dropzone" class="dropzone">
+              <strong>Drop JPGs here</strong>
+              <span>3840x2160 sources only</span>
+            </div>
+
+            <div class="stat-grid" aria-label="Batch status">
+              <div class="stat">
+                <span>Queued</span>
+                <strong id="file-count">0</strong>
+              </div>
+              <div class="stat">
+                <span>Ready</span>
+                <strong id="ready-count">0</strong>
+              </div>
+              <div class="stat">
+                <span>Skipped</span>
+                <strong id="error-count">0</strong>
+              </div>
+            </div>
+
+            <div class="rule-strip" aria-label="Output rule">
+              <div class="rule-row">
+                <span>Pixels</span>
+                <code>3840x2160 -> 1920x1080</code>
+              </div>
+              <div class="rule-row">
+                <span>Name</span>
+                <code>3840x2160 -> 1920x1080</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="output-panel">
+            <section id="preview" class="preview-panel" hidden>
+              <div class="preview-frame">
+                <img id="preview-image" alt="">
+              </div>
+              <div class="preview-copy">
+                <span>Latest Output</span>
+                <strong id="preview-name"></strong>
+              </div>
+            </section>
+
+            <section class="results-wrap" aria-label="Image results">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Original</th>
+                    <th>Output</th>
+                    <th>Dimensions</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+              </table>
+              <div id="empty-state" class="empty-state">No files queued.</div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <section class="docs">
+        <h2>Output Names</h2>
+        <div>
+          <p>
+            HISTI replaces the <code>3840x2160</code> token with <code>1920x1080</code> and leaves the rest of the file name alone.
+          </p>
+          <p>
+            <code>jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_3840x2160.jpg</code>
+            becomes
+            <code>jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_1920x1080.jpg</code>.
+          </p>
+        </div>
+      </section>
+
+      <section class="docs">
+        <h2>Bulk Downloads</h2>
+        <div>
+          <ul>
+            <li>One ready image downloads as one JPG.</li>
+            <li>Multiple ready images download together as a ZIP.</li>
+            <li>Skipped files stay listed with the reason they were skipped.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="docs">
+        <h2>Privacy</h2>
+        <div>
+          <p>
+            The browser version runs locally in the page. The images do not leave your computer.
+          </p>
+        </div>
+      </section>
+
+      <footer>
+        HISTI V1.1. Source and releases are published at
+        <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
+      </footer>
+    </div>
+
+    <script src="histi_core.js"></script>
+    <script src="zip_store.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
