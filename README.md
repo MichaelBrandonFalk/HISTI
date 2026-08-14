@@ -20,7 +20,7 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 Download the offline browser app package:
 
-- [HISTI V1_1.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.1/HISTI%20V1_1.zip)
+- [HISTI V1_1.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.1/HISTI.V1_1.zip)
 
 The ZIP contains the same browser app and documentation files. Open `index.html` from the package or serve the folder with a small local web server.
 
