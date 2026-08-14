@@ -2,11 +2,11 @@
 
 HISTI is a small browser tool for making 1920x1080 JPG copies from 3840x2160 JPG source files.
 
-The app displays as **Honey I Shrunk The Images**.
+The app displays as **Honey, I Shrunk the Images**.
 
 ## Version
 
-Current public version: `V1.1`
+Current public version: `V1.2`
 
 ## Browser App
 
@@ -20,7 +20,7 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 Download the offline browser app package:
 
-- [HISTI V1_1.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.1/HISTI.V1_1.zip)
+- [HISTI.V1_2.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.2/HISTI.V1_2.zip)
 
 The ZIP contains the same browser app and documentation files. Open `index.html` from the package or serve the folder with a small local web server.
 
@@ -53,12 +53,12 @@ The visual content is scaled to 1920x1080 with no crop, rotation, watermark, or 
 Run the versioned build script from this directory:
 
 ```bash
-./build_histi_v1_1.sh
+./build_histi_v1_2.sh
 ```
 
 The script creates:
 
-- `downloads/HISTI V1_1.zip`
+- `downloads/HISTI.V1_2.zip`
 
 ## Versioning
 

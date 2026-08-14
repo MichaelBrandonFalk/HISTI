@@ -253,7 +253,7 @@
         name: output.outputName,
         blob: output.blob,
       })));
-      downloadBlob(blob, "HISTI_V1_1_1920x1080_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_2_1920x1080_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -297,15 +297,22 @@
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
+      const action = document.createElement("td");
       const original = document.createElement("td");
       const output = document.createElement("td");
-      const dimensions = document.createElement("td");
       const status = document.createElement("td");
-      const action = document.createElement("td");
 
-      original.textContent = row.inputName;
-      output.textContent = row.outputName || "";
-      dimensions.textContent = row.outputDimensions || row.sourceDimensions || "";
+      action.className = "download-cell";
+      original.append(createFileName(row.inputName));
+      if (row.inputSize) {
+        original.append(createMeta(core.formatBytes(row.inputSize)));
+      }
+      if (row.outputName) {
+        output.append(createFileName(row.outputName));
+      }
+      if (row.outputDimensions) {
+        output.append(createMeta(row.outputDimensions));
+      }
       status.textContent = row.error || row.status;
       status.dataset.status = row.blob ? "ready" : row.error ? "error" : "queued";
 
@@ -313,14 +320,30 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "tiny-button";
-        button.textContent = "Download";
+        button.textContent = "Download JPG";
         button.addEventListener("click", () => downloadBlob(row.blob, row.outputName));
         action.append(button);
+      } else {
+        action.append(createMeta(row.status));
       }
 
-      tr.append(original, output, dimensions, status, action);
+      tr.append(action, original, output, status);
       refs.tableBody.append(tr);
     });
+  }
+
+  function createFileName(value) {
+    const span = document.createElement("span");
+    span.className = "file-name";
+    span.textContent = value || "";
+    return span;
+  }
+
+  function createMeta(value) {
+    const span = document.createElement("span");
+    span.className = "row-meta";
+    span.textContent = value || "";
+    return span;
   }
 
   function render() {

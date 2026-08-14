@@ -1,0 +1,15 @@
+{
+  "name": "Honey, I Shrunk the Images",
+  "short_name": "HISTI",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f6f2",
+  "theme_color": "#276749",
+  "icons": [
+    {
+      "src": "assets/histi_icon.png",
+      "sizes": "728x708",
+      "type": "image/png"
+    }
+  ]
+}

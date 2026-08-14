@@ -3,18 +3,24 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HISTI V1.1</title>
-    <meta name="description" content="Honey I Shrunk The Images converts 3840x2160 JPG files into 1920x1080 JPG copies in bulk.">
+    <title>HISTI V1.2</title>
+    <meta name="description" content="Honey, I Shrunk the Images converts 3840x2160 JPG files into 1920x1080 JPG copies in bulk.">
+    <link rel="icon" type="image/png" href="assets/histi_icon.png">
+    <link rel="apple-touch-icon" href="assets/histi_icon.png">
+    <link rel="manifest" href="site.webmanifest">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">HISTI <span data-version>V1.1</span></p>
-          <h1>Honey I Shrunk The Images</h1>
+        <div class="brand-lockup">
+          <img class="brand-icon" src="assets/histi_icon.png" alt="">
+          <div>
+            <p class="eyebrow">HISTI <span data-version>V1.2</span></p>
+            <h1>Honey, I Shrunk the Images</h1>
+          </div>
         </div>
-        <a class="button-link" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.1/HISTI.V1_1.zip">Download V1.1</a>
+        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.2/HISTI.V1_2.zip">Download App V1.2</a>
       </header>
 
       <main class="workspace">
@@ -23,7 +29,7 @@
             <input id="file-input" class="file-input" type="file" accept=".jpg,.jpeg,image/jpeg" multiple>
             <button id="pick-button" class="secondary-action" type="button">Select JPGs</button>
             <button id="process-button" class="primary-action" type="button" disabled>Process</button>
-            <button id="download-all-button" class="secondary-action" type="button" disabled>Download</button>
+            <button id="download-all-button" class="secondary-action" type="button" disabled>Download All Outputs</button>
             <button id="clear-button" class="secondary-action" type="button">Clear</button>
           </div>
           <p id="status-line" class="status-line" aria-live="polite">Select one or more JPG files.</p>
@@ -78,11 +84,10 @@
               <table>
                 <thead>
                   <tr>
+                    <th>Download</th>
                     <th>Original</th>
-                    <th>Output</th>
-                    <th>Dimensions</th>
+                    <th>Output File</th>
                     <th>Status</th>
-                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="results-body"></tbody>
@@ -128,7 +133,7 @@
       </section>
 
       <footer>
-        HISTI V1.1. Source and releases are published at
+        HISTI V1.2. Source and releases are published at
         <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
       </footer>
     </div>

@@ -3,6 +3,11 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
+test("exposes the V1.2 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.2");
+  assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
+});
+
 test("converts the dimension token and preserves the rest of the name", () => {
   assert.equal(
     core.buildOutputFileName("jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_3840x2160.jpg"),
