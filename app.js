@@ -6,10 +6,11 @@
   const outputUrls = new Map();
 
   const state = {
-    files: [],
-    outputs: [],
+    items: [],
+    pendingItems: [],
     processing: false,
   };
+  let nextItemId = 1;
 
   const refs = {};
 
@@ -26,6 +27,11 @@
     refs.downloadAllButton = $("#download-all-button");
     refs.clearButton = $("#clear-button");
     refs.status = $("#status-line");
+    refs.queueChoice = $("#queue-choice");
+    refs.queueSummary = $("#queue-choice-summary");
+    refs.queueAdd = $("#queue-add");
+    refs.queueReplace = $("#queue-replace");
+    refs.queueCancel = $("#queue-cancel");
     refs.tableBody = $("#results-body");
     refs.emptyState = $("#empty-state");
     refs.fileCount = $("#file-count");
@@ -43,10 +49,10 @@
 
   function setBusy(isBusy) {
     state.processing = isBusy;
-    refs.processButton.disabled = isBusy || state.files.length === 0;
+    refs.processButton.disabled = isBusy || !hasQueuedJpegs();
     refs.pickButton.disabled = isBusy;
-    refs.clearButton.disabled = isBusy && state.outputs.length === 0;
-    refs.downloadAllButton.disabled = isBusy || state.outputs.length === 0;
+    refs.clearButton.disabled = isBusy || state.items.length === 0;
+    refs.downloadAllButton.disabled = isBusy || readyItems().length === 0;
     refs.processButton.textContent = isBusy ? "Processing..." : "Process";
   }
 
@@ -55,25 +61,97 @@
     outputUrls.clear();
   }
 
-  function setFiles(files) {
-    resetObjectUrls();
-    state.files = [...files].filter((file) => core.isJpegFileName(file.name));
-    state.outputs = [];
-    refs.fileInput.value = "";
-    render();
+  function selectedFileItems(files) {
+    return [...files].map((file) => {
+      const item = {
+        id: `item-${nextItemId}`,
+        file: core.isJpegFileName(file.name) ? file : null,
+        inputName: file.name,
+        outputName: "",
+        inputSize: file.size,
+        outputSize: 0,
+        sourceDimensions: "",
+        outputDimensions: "",
+        blob: null,
+        status: "Queued",
+        error: "",
+      };
+      nextItemId += 1;
 
-    if (state.files.length === 0) {
-      setStatus("Select one or more JPG files.", "warn");
-    } else {
-      setStatus(`${state.files.length} JPG file${state.files.length === 1 ? "" : "s"} queued.`, "ready");
+      if (!item.file) {
+        item.status = "Skipped";
+        item.error = "Only JPG files are supported.";
+      }
+
+      return item;
+    });
+  }
+
+  function handleSelectedFiles(files) {
+    const items = selectedFileItems(files || []);
+    refs.fileInput.value = "";
+
+    if (items.length === 0) {
+      setStatus("No files selected.", "warn");
+      return;
     }
+
+    if (state.items.length > 0) {
+      state.pendingItems = items;
+      showQueueChoice(items);
+      return;
+    }
+
+    applySelectedItems(items, "replace");
+  }
+
+  function showQueueChoice(items) {
+    refs.queueSummary.textContent = selectionSummary(items);
+    refs.queueChoice.hidden = false;
+    refs.queueAdd.focus();
+  }
+
+  function hideQueueChoice() {
+    refs.queueChoice.hidden = true;
+    state.pendingItems = [];
+  }
+
+  function applySelectedItems(items, mode) {
+    if (mode === "replace") {
+      resetObjectUrls();
+      state.items = items;
+      refs.preview.hidden = true;
+      refs.previewImage.removeAttribute("src");
+      refs.previewName.textContent = "";
+    } else {
+      state.items = [...state.items, ...items];
+    }
+
+    hideQueueChoice();
+    render();
+    setStatus(selectionSummary(items, mode === "add" ? "Added" : "Queued"), statusKindForItems(items));
+  }
+
+  function selectionSummary(items, verb = "Selected") {
+    const jpegs = items.filter((item) => item.file).length;
+    const skipped = items.length - jpegs;
+    const noun = jpegs === 1 ? "JPG" : "JPGs";
+    if (skipped > 0) {
+      return `${verb} ${jpegs} ${noun}; ${skipped} skipped.`;
+    }
+    return `${verb} ${jpegs} ${noun}.`;
+  }
+
+  function statusKindForItems(items) {
+    return items.some((item) => item.error) ? "warn" : "ready";
   }
 
   function clearAll() {
     resetObjectUrls();
-    state.files = [];
-    state.outputs = [];
+    state.items = [];
+    state.pendingItems = [];
     refs.fileInput.value = "";
+    refs.queueChoice.hidden = true;
     refs.preview.hidden = true;
     refs.previewImage.removeAttribute("src");
     refs.previewName.textContent = "";
@@ -142,8 +220,10 @@
     });
   }
 
-  async function resizeImage(file) {
-    const outputName = core.buildOutputFileName(file.name);
+  async function resizeImage(item) {
+    const file = item.file;
+    const outputName = core.buildOutputFileName(item.inputName);
+    const sourceBytes = new Uint8Array(await file.arrayBuffer());
     const image = await loadImage(file);
     const width = image.width || image.naturalWidth;
     const height = image.height || image.naturalHeight;
@@ -162,12 +242,16 @@
       image.close();
     }
 
-    const blob = await canvasToJpeg(canvas);
+    const rawBlob = await canvasToJpeg(canvas);
+    const rawBytes = new Uint8Array(await rawBlob.arrayBuffer());
+    const mergedBytes = core.mergeJpegMetadata(rawBytes, sourceBytes);
+    const blob = new Blob([mergedBytes], { type: "image/jpeg" });
+
     return {
-      id: `${file.name}-${file.lastModified}-${file.size}`,
-      inputName: file.name,
+      id: item.id,
+      inputName: item.inputName,
       outputName,
-      inputSize: file.size,
+      inputSize: item.inputSize,
       outputSize: blob.size,
       sourceDimensions: `${width}x${height}`,
       outputDimensions: `${core.TARGET_WIDTH}x${core.TARGET_HEIGHT}`,
@@ -178,27 +262,24 @@
   }
 
   async function processFiles() {
-    if (state.processing || state.files.length === 0) {
+    if (state.processing || !hasQueuedJpegs()) {
       return;
     }
 
-    resetObjectUrls();
-    state.outputs = [];
     render();
     setBusy(true);
     setStatus("Processing JPG files...", "ready");
 
-    for (let index = 0; index < state.files.length; index += 1) {
-      const file = state.files[index];
+    for (const item of state.items) {
+      if (!item.file || item.blob || item.error) {
+        continue;
+      }
+
       try {
-        const output = await resizeImage(file);
-        state.outputs.push(output);
+        Object.assign(item, await resizeImage(item));
       } catch (error) {
-        state.outputs.push({
-          id: `${file.name}-${file.lastModified}-${file.size}-${index}`,
-          inputName: file.name,
+        Object.assign(item, {
           outputName: "",
-          inputSize: file.size,
           outputSize: 0,
           sourceDimensions: "",
           outputDimensions: "",
@@ -210,12 +291,12 @@
       render();
     }
 
-    const readyCount = state.outputs.filter((output) => output.blob).length;
-    const errorCount = state.outputs.length - readyCount;
+    const readyCount = readyItems().length;
+    const errorCount = state.items.filter((item) => item.error).length;
     setBusy(false);
 
     if (readyCount > 0) {
-      showPreview(state.outputs.find((output) => output.blob));
+      showPreview(readyItems().at(-1));
     }
 
     if (errorCount > 0) {
@@ -236,7 +317,7 @@
   }
 
   async function downloadAll() {
-    const outputs = state.outputs.filter((output) => output.blob);
+    const outputs = readyItems();
     if (outputs.length === 0) {
       return;
     }
@@ -253,7 +334,7 @@
         name: output.outputName,
         blob: output.blob,
       })));
-      downloadBlob(blob, "HISTI_V1_2_1920x1080_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_3_1920x1080_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -263,9 +344,9 @@
   }
 
   function renderStats() {
-    const readyCount = state.outputs.filter((output) => output.blob).length;
-    const errorCount = state.outputs.filter((output) => !output.blob).length;
-    refs.fileCount.textContent = String(state.files.length);
+    const readyCount = readyItems().length;
+    const errorCount = state.items.filter((item) => item.error).length;
+    refs.fileCount.textContent = String(state.items.length);
     refs.readyCount.textContent = String(readyCount);
     refs.errorCount.textContent = String(errorCount);
   }
@@ -273,27 +354,14 @@
   function renderRows() {
     refs.tableBody.innerHTML = "";
 
-    if (state.files.length === 0 && state.outputs.length === 0) {
+    if (state.items.length === 0) {
       refs.emptyState.hidden = false;
       return;
     }
 
     refs.emptyState.hidden = true;
 
-    const rows = state.outputs.length > 0
-      ? state.outputs
-      : state.files.map((file) => ({
-        id: `${file.name}-${file.lastModified}-${file.size}`,
-        inputName: file.name,
-        outputName: "",
-        inputSize: file.size,
-        outputSize: 0,
-        sourceDimensions: "",
-        outputDimensions: "",
-        blob: null,
-        status: "Queued",
-        error: "",
-      }));
+    const rows = state.items;
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
@@ -349,19 +417,35 @@
   function render() {
     renderStats();
     renderRows();
-    refs.processButton.disabled = state.processing || state.files.length === 0;
-    refs.downloadAllButton.disabled = state.processing || !state.outputs.some((output) => output.blob);
-    refs.clearButton.disabled = state.processing ? state.files.length === 0 && state.outputs.length === 0 : false;
+    refs.processButton.disabled = state.processing || !hasQueuedJpegs();
+    refs.downloadAllButton.disabled = state.processing || readyItems().length === 0;
+    refs.clearButton.disabled = state.processing || state.items.length === 0;
+  }
+
+  function readyItems() {
+    return state.items.filter((item) => item.blob);
+  }
+
+  function hasQueuedJpegs() {
+    return state.items.some((item) => item.file && !item.blob && !item.error);
   }
 
   function bindEvents() {
     refs.version.textContent = core.APP_VERSION;
 
     refs.pickButton.addEventListener("click", () => refs.fileInput.click());
-    refs.fileInput.addEventListener("change", (event) => setFiles(event.target.files || []));
+    refs.fileInput.addEventListener("change", (event) => handleSelectedFiles(event.target.files || []));
     refs.processButton.addEventListener("click", processFiles);
     refs.downloadAllButton.addEventListener("click", downloadAll);
     refs.clearButton.addEventListener("click", clearAll);
+    refs.queueAdd.addEventListener("click", () => applySelectedItems(state.pendingItems, "add"));
+    refs.queueReplace.addEventListener("click", () => applySelectedItems(state.pendingItems, "replace"));
+    refs.queueCancel.addEventListener("click", hideQueueChoice);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !refs.queueChoice.hidden) {
+        hideQueueChoice();
+      }
+    });
 
     ["dragenter", "dragover"].forEach((eventName) => {
       refs.dropzone.addEventListener(eventName, (event) => {
@@ -378,7 +462,7 @@
     });
 
     refs.dropzone.addEventListener("drop", (event) => {
-      setFiles(event.dataTransfer.files || []);
+      handleSelectedFiles(event.dataTransfer.files || []);
     });
   }
 

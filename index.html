@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HISTI V1.2</title>
+    <title>HISTI V1.3</title>
     <meta name="description" content="Honey, I Shrunk the Images converts 3840x2160 JPG files into 1920x1080 JPG copies in bulk.">
     <link rel="icon" type="image/png" href="assets/histi_icon.png">
     <link rel="apple-touch-icon" href="assets/histi_icon.png">
@@ -16,18 +16,18 @@
         <div class="brand-lockup">
           <img class="brand-icon" src="assets/histi_icon.png" alt="">
           <div>
-            <p class="eyebrow">HISTI <span data-version>V1.2</span></p>
+            <p class="eyebrow">HISTI <span data-version>V1.3</span></p>
             <h1>Honey, I Shrunk the Images</h1>
           </div>
         </div>
-        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.2/HISTI.V1_2.zip">Download App V1.2</a>
+        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.3/HISTI.V1_3.zip">Download App V1.3</a>
       </header>
 
       <main class="workspace">
         <section class="toolbar" aria-label="Image actions">
           <div class="actions">
-            <input id="file-input" class="file-input" type="file" accept=".jpg,.jpeg,image/jpeg" multiple>
-            <button id="pick-button" class="secondary-action" type="button">Select JPGs</button>
+            <input id="file-input" class="file-input" type="file" multiple>
+            <button id="pick-button" class="secondary-action" type="button">Select Files</button>
             <button id="process-button" class="primary-action" type="button" disabled>Process</button>
             <button id="download-all-button" class="secondary-action" type="button" disabled>Download All Outputs</button>
             <button id="clear-button" class="secondary-action" type="button">Clear</button>
@@ -38,13 +38,13 @@
         <section class="tool-layout">
           <div class="input-panel">
             <div id="dropzone" class="dropzone">
-              <strong>Drop JPGs here</strong>
-              <span>3840x2160 sources only</span>
+              <strong>Drop files here</strong>
+              <span>JPGs process; other files are marked skipped</span>
             </div>
 
             <div class="stat-grid" aria-label="Batch status">
               <div class="stat">
-                <span>Queued</span>
+                <span>Selected</span>
                 <strong id="file-count">0</strong>
               </div>
               <div class="stat">
@@ -124,6 +124,15 @@
       </section>
 
       <section class="docs">
+        <h2>Metadata</h2>
+        <div>
+          <p>
+            HISTI copies JPEG metadata segments into the resized output and updates common EXIF/XMP pixel dimension fields to <code>1920x1080</code>.
+          </p>
+        </div>
+      </section>
+
+      <section class="docs">
         <h2>Privacy</h2>
         <div>
           <p>
@@ -133,9 +142,21 @@
       </section>
 
       <footer>
-        HISTI V1.2. Source and releases are published at
+        HISTI V1.3. Source and releases are published at
         <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
       </footer>
+    </div>
+
+    <div id="queue-choice" class="queue-choice" role="dialog" aria-modal="true" aria-labelledby="queue-choice-title" hidden>
+      <section class="queue-dialog">
+        <h2 id="queue-choice-title">Add or Replace?</h2>
+        <p id="queue-choice-summary"></p>
+        <div class="queue-actions">
+          <button id="queue-add" class="primary-action" type="button">Add to Queue</button>
+          <button id="queue-replace" class="secondary-action" type="button">Replace Queue</button>
+          <button id="queue-cancel" class="secondary-action" type="button">Cancel</button>
+        </div>
+      </section>
     </div>
 
     <script src="histi_core.js"></script>

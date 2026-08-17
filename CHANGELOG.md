@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.3 - 2026-08-17
+
+- Added explicit Add to Queue / Replace Queue choice when selecting files after a queue already exists.
+- Added immediate skipped rows for non-JPG selections.
+- Preserved source JPEG metadata segments in resized outputs while updating common EXIF/XMP dimension fields to 1920x1080.
+- Added `release_source.json` so the hosted page and downloadable ZIP can be confirmed against the same versioned source marker.
+
 ## V1.2 - 2026-08-14
 
 - Updated the display name to `Honey, I Shrunk the Images`.
