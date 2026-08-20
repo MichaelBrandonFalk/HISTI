@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4 - 2026-08-20
+
+- Added default dual-output generation for each valid JPG: `16x9_1920x1080` and `1x1_3000x3000`.
+- Added square output naming that changes `16x9_3840x2160` to `1x1_3000x3000`.
+- Added 3000x3000 square rendering by scaling the source to 3000px high and center-cropping the width.
+- Updated metadata dimension patching to use each output target's actual dimensions.
+
 ## V1.3 - 2026-08-17
 
 - Added explicit Add to Queue / Replace Queue choice when selecting files after a queue already exists.

@@ -9,16 +9,42 @@
 
   const APP_NAME = "HISTI";
   const DISPLAY_NAME = "Honey, I Shrunk the Images";
-  const APP_VERSION = "V1.3";
+  const APP_VERSION = "V1.4";
   const SOURCE_WIDTH = 3840;
   const SOURCE_HEIGHT = 2160;
   const TARGET_WIDTH = 1920;
   const TARGET_HEIGHT = 1080;
+  const SQUARE_TARGET_WIDTH = 3000;
+  const SQUARE_TARGET_HEIGHT = 3000;
   const SOURCE_TOKEN = "3840x2160";
   const TARGET_TOKEN = "1920x1080";
+  const SQUARE_TARGET_TOKEN = "3000x3000";
+  const SOURCE_RATIO_TOKEN = "16x9";
+  const SQUARE_RATIO_TOKEN = "1x1";
   const JPEG_EXTENSION_RE = /\.(jpe?g)$/i;
   const SOURCE_TOKEN_RE = /3840x2160/gi;
   const SOURCE_TOKEN_FIND_RE = /3840x2160/i;
+  const SOURCE_RATIO_TOKEN_RE = /16x9/gi;
+  const OUTPUT_TARGETS = [
+    {
+      id: "16x9",
+      label: "16x9 1920x1080",
+      width: TARGET_WIDTH,
+      height: TARGET_HEIGHT,
+      ratioToken: SOURCE_RATIO_TOKEN,
+      dimensionToken: TARGET_TOKEN,
+      mode: "fit",
+    },
+    {
+      id: "1x1",
+      label: "1x1 3000x3000",
+      width: SQUARE_TARGET_WIDTH,
+      height: SQUARE_TARGET_HEIGHT,
+      ratioToken: SQUARE_RATIO_TOKEN,
+      dimensionToken: SQUARE_TARGET_TOKEN,
+      mode: "cover",
+    },
+  ];
   const MARKER_SOS = 0xda;
   const MARKER_EOI = 0xd9;
   const MARKER_COM = 0xfe;
@@ -43,8 +69,17 @@
     return SOURCE_TOKEN_FIND_RE.test(String(fileName || ""));
   }
 
-  function buildOutputFileName(fileName) {
+  function getOutputTarget(targetId) {
+    const target = OUTPUT_TARGETS.find((candidate) => candidate.id === targetId);
+    if (!target) {
+      throw new Error(`Unknown output target: ${targetId}.`);
+    }
+    return target;
+  }
+
+  function buildOutputFileName(fileName, targetId = "16x9") {
     const value = String(fileName || "").trim();
+    const target = getOutputTarget(targetId);
 
     if (!value) {
       throw new Error("Missing file name.");
@@ -58,7 +93,11 @@
       throw new Error("File name must include 3840x2160.");
     }
 
-    return value.replace(SOURCE_TOKEN_RE, TARGET_TOKEN);
+    const renamed = value.replace(SOURCE_TOKEN_RE, target.dimensionToken);
+    if (target.id === "1x1") {
+      return renamed.replace(SOURCE_RATIO_TOKEN_RE, target.ratioToken);
+    }
+    return renamed;
   }
 
   function validateSourceDimensions(width, height) {
@@ -120,7 +159,7 @@
     return marker === MARKER_COM || (marker >= 0xe0 && marker <= 0xef);
   }
 
-  function extractJpegMetadataSegments(input) {
+  function extractJpegMetadataSegments(input, target = getOutputTarget("16x9")) {
     const bytes = toUint8Array(input);
     const segments = [];
 
@@ -169,7 +208,7 @@
       }
 
       if (isMetadataMarker(marker)) {
-        segments.push(sanitizeMetadataSegment(bytes.slice(markerStart, segmentEnd)));
+        segments.push(sanitizeMetadataSegment(bytes.slice(markerStart, segmentEnd), target));
       }
 
       offset = segmentEnd;
@@ -214,9 +253,9 @@
     return offset;
   }
 
-  function mergeJpegMetadata(outputJpeg, sourceJpeg) {
+  function mergeJpegMetadata(outputJpeg, sourceJpeg, target = getOutputTarget("16x9")) {
     const outputBytes = toUint8Array(outputJpeg);
-    const metadataSegments = extractJpegMetadataSegments(sourceJpeg);
+    const metadataSegments = extractJpegMetadataSegments(sourceJpeg, target);
 
     if (metadataSegments.length === 0) {
       return outputBytes.slice();
@@ -226,7 +265,7 @@
     return concatBytes([outputBytes.slice(0, 2), ...metadataSegments, outputBytes.slice(tailStart)]);
   }
 
-  function sanitizeMetadataSegment(segment) {
+  function sanitizeMetadataSegment(segment, target = getOutputTarget("16x9")) {
     const marker = segment[1];
     if (marker !== 0xe1) {
       return segment;
@@ -234,11 +273,11 @@
 
     const payload = segment.subarray(4);
     if (startsWithAscii(payload, "Exif\0\0")) {
-      return patchExifSegment(segment);
+      return patchExifSegment(segment, target);
     }
 
     if (containsAscii(payload, "http://ns.adobe.com/xap/1.0/") || containsAscii(payload, "<x:xmpmeta")) {
-      return patchXmpSegment(segment);
+      return patchXmpSegment(segment, target);
     }
 
     return segment;
@@ -278,14 +317,14 @@
     return bytes;
   }
 
-  function patchXmpSegment(segment) {
+  function patchXmpSegment(segment, target) {
     const prefix = segment.slice(0, 4);
     const payloadText = decodeUtf8(segment.subarray(4));
     const patchedText = payloadText
-      .replace(/((?:(?:tiff:)?ImageWidth|(?:exif:)?PixelXDimension)\s*=\s*["'])\d+(["'])/g, `$1${TARGET_WIDTH}$2`)
-      .replace(/((?:(?:tiff:)?(?:ImageLength|ImageHeight)|(?:exif:)?PixelYDimension)\s*=\s*["'])\d+(["'])/g, `$1${TARGET_HEIGHT}$2`)
-      .replace(/(<(?:(?:tiff:)?ImageWidth|(?:exif:)?PixelXDimension)>)[^<]*(<\/[^>]+>)/g, `$1${TARGET_WIDTH}$2`)
-      .replace(/(<(?:(?:tiff:)?(?:ImageLength|ImageHeight)|(?:exif:)?PixelYDimension)>)[^<]*(<\/[^>]+>)/g, `$1${TARGET_HEIGHT}$2`);
+      .replace(/((?:(?:tiff:)?ImageWidth|(?:exif:)?PixelXDimension)\s*=\s*["'])\d+(["'])/g, `$1${target.width}$2`)
+      .replace(/((?:(?:tiff:)?(?:ImageLength|ImageHeight)|(?:exif:)?PixelYDimension)\s*=\s*["'])\d+(["'])/g, `$1${target.height}$2`)
+      .replace(/(<(?:(?:tiff:)?ImageWidth|(?:exif:)?PixelXDimension)>)[^<]*(<\/[^>]+>)/g, `$1${target.width}$2`)
+      .replace(/(<(?:(?:tiff:)?(?:ImageLength|ImageHeight)|(?:exif:)?PixelYDimension)>)[^<]*(<\/[^>]+>)/g, `$1${target.height}$2`);
     const payloadBytes = encodeUtf8(patchedText);
     const length = payloadBytes.length + 2;
 
@@ -325,7 +364,7 @@
     return bytes;
   }
 
-  function patchExifSegment(segment) {
+  function patchExifSegment(segment, target) {
     const patched = segment.slice();
     const tiffStart = 10;
 
@@ -395,9 +434,9 @@
         const entry = entriesStart + index * 12;
         const tag = read16(entry);
         if (tag === 0x0100 || tag === 0xa002) {
-          updateExifEntryValue(entry, TARGET_WIDTH, read16, read32, write16, write32, tiffStart, patched.length);
+          updateExifEntryValue(entry, target.width, read16, read32, write16, write32, tiffStart, patched.length);
         } else if (tag === 0x0101 || tag === 0xa003) {
-          updateExifEntryValue(entry, TARGET_HEIGHT, read16, read32, write16, write32, tiffStart, patched.length);
+          updateExifEntryValue(entry, target.height, read16, read32, write16, write32, tiffStart, patched.length);
         } else if (tag === 0x8769) {
           updateIfd(read32(entry + 8));
         }
@@ -444,11 +483,16 @@
     SOURCE_HEIGHT,
     TARGET_WIDTH,
     TARGET_HEIGHT,
+    SQUARE_TARGET_WIDTH,
+    SQUARE_TARGET_HEIGHT,
     SOURCE_TOKEN,
     TARGET_TOKEN,
+    SQUARE_TARGET_TOKEN,
+    OUTPUT_TARGETS,
     buildOutputFileName,
     extractJpegMetadataSegments,
     formatBytes,
+    getOutputTarget,
     isJpegFileName,
     mergeJpegMetadata,
     validateSourceDimensions,

@@ -62,28 +62,53 @@
   }
 
   function selectedFileItems(files) {
-    return [...files].map((file) => {
-      const item = {
-        id: `item-${nextItemId}`,
-        file: core.isJpegFileName(file.name) ? file : null,
-        inputName: file.name,
-        outputName: "",
-        inputSize: file.size,
-        outputSize: 0,
-        sourceDimensions: "",
-        outputDimensions: "",
-        blob: null,
-        status: "Queued",
-        error: "",
-      };
-      nextItemId += 1;
-
-      if (!item.file) {
-        item.status = "Skipped";
-        item.error = "Only JPG files are supported.";
+    return [...files].flatMap((file) => {
+      if (!core.isJpegFileName(file.name)) {
+        const item = {
+          id: `item-${nextItemId}`,
+          file: null,
+          targetId: "",
+          targetLabel: "",
+          inputName: file.name,
+          outputName: "",
+          inputSize: file.size,
+          outputSize: 0,
+          sourceDimensions: "",
+          outputDimensions: "",
+          blob: null,
+          status: "Skipped",
+          error: "Only JPG files are supported.",
+        };
+        nextItemId += 1;
+        return [item];
       }
 
-      return item;
+      return core.OUTPUT_TARGETS.map((target) => {
+        let outputName = "";
+        try {
+          outputName = core.buildOutputFileName(file.name, target.id);
+        } catch {
+          outputName = "";
+        }
+
+        const item = {
+          id: `item-${nextItemId}`,
+          file,
+          targetId: target.id,
+          targetLabel: target.label,
+          inputName: file.name,
+          outputName,
+          inputSize: file.size,
+          outputSize: 0,
+          sourceDimensions: "",
+          outputDimensions: "",
+          blob: null,
+          status: "Queued",
+          error: "",
+        };
+        nextItemId += 1;
+        return item;
+      });
     });
   }
 
@@ -133,13 +158,13 @@
   }
 
   function selectionSummary(items, verb = "Selected") {
-    const jpegs = items.filter((item) => item.file).length;
-    const skipped = items.length - jpegs;
-    const noun = jpegs === 1 ? "JPG" : "JPGs";
+    const outputs = items.filter((item) => item.file).length;
+    const skipped = items.length - outputs;
+    const noun = outputs === 1 ? "output" : "outputs";
     if (skipped > 0) {
-      return `${verb} ${jpegs} ${noun}; ${skipped} skipped.`;
+      return `${verb} ${outputs} ${noun}; ${skipped} skipped.`;
     }
-    return `${verb} ${jpegs} ${noun}.`;
+    return `${verb} ${outputs} ${noun}.`;
   }
 
   function statusKindForItems(items) {
@@ -222,7 +247,8 @@
 
   async function resizeImage(item) {
     const file = item.file;
-    const outputName = core.buildOutputFileName(item.inputName);
+    const target = core.getOutputTarget(item.targetId);
+    const outputName = core.buildOutputFileName(item.inputName, target.id);
     const sourceBytes = new Uint8Array(await file.arrayBuffer());
     const image = await loadImage(file);
     const width = image.width || image.naturalWidth;
@@ -230,13 +256,13 @@
     core.validateSourceDimensions(width, height);
 
     const canvas = document.createElement("canvas");
-    canvas.width = core.TARGET_WIDTH;
-    canvas.height = core.TARGET_HEIGHT;
+    canvas.width = target.width;
+    canvas.height = target.height;
 
     const context = canvas.getContext("2d", { alpha: false });
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    context.drawImage(image, 0, 0, core.TARGET_WIDTH, core.TARGET_HEIGHT);
+    drawTargetImage(context, image, width, height, target);
 
     if (typeof image.close === "function") {
       image.close();
@@ -244,7 +270,7 @@
 
     const rawBlob = await canvasToJpeg(canvas);
     const rawBytes = new Uint8Array(await rawBlob.arrayBuffer());
-    const mergedBytes = core.mergeJpegMetadata(rawBytes, sourceBytes);
+    const mergedBytes = core.mergeJpegMetadata(rawBytes, sourceBytes, target);
     const blob = new Blob([mergedBytes], { type: "image/jpeg" });
 
     return {
@@ -254,11 +280,25 @@
       inputSize: item.inputSize,
       outputSize: blob.size,
       sourceDimensions: `${width}x${height}`,
-      outputDimensions: `${core.TARGET_WIDTH}x${core.TARGET_HEIGHT}`,
+      outputDimensions: `${target.width}x${target.height}`,
       blob,
       status: "Ready",
       error: "",
     };
+  }
+
+  function drawTargetImage(context, image, width, height, target) {
+    if (target.mode === "cover") {
+      const scale = Math.max(target.width / width, target.height / height);
+      const drawWidth = width * scale;
+      const drawHeight = height * scale;
+      const dx = (target.width - drawWidth) / 2;
+      const dy = (target.height - drawHeight) / 2;
+      context.drawImage(image, dx, dy, drawWidth, drawHeight);
+      return;
+    }
+
+    context.drawImage(image, 0, 0, target.width, target.height);
   }
 
   async function processFiles() {
@@ -334,7 +374,7 @@
         name: output.outputName,
         blob: output.blob,
       })));
-      downloadBlob(blob, "HISTI_V1_3_1920x1080_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_4_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -378,7 +418,9 @@
       if (row.outputName) {
         output.append(createFileName(row.outputName));
       }
-      if (row.outputDimensions) {
+      if (row.targetLabel) {
+        output.append(createMeta(row.targetLabel));
+      } else if (row.outputDimensions) {
         output.append(createMeta(row.outputDimensions));
       }
       status.textContent = row.error || row.status;

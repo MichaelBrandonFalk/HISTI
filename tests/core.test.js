@@ -3,20 +3,28 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
-test("exposes the V1.3 display metadata", () => {
-  assert.equal(core.APP_VERSION, "V1.3");
+test("exposes the V1.4 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.4");
   assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
 });
 
-test("converts the dimension token and preserves the rest of the name", () => {
+test("converts the dimension token for the 16x9 output", () => {
   assert.equal(
     core.buildOutputFileName("jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_3840x2160.jpg"),
     "jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_1920x1080.jpg"
   );
 });
 
+test("converts the ratio and dimension tokens for the 1x1 output", () => {
+  assert.equal(
+    core.buildOutputFileName("jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_3840x2160.jpg", "1x1"),
+    "jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_1x1_3000x3000.jpg"
+  );
+});
+
 test("converts a plain dimension filename", () => {
   assert.equal(core.buildOutputFileName("3840x2160.jpg"), "1920x1080.jpg");
+  assert.equal(core.buildOutputFileName("3840x2160.jpg", "1x1"), "3000x3000.jpg");
 });
 
 test("preserves jpeg extension text and converts uppercase source token", () => {
@@ -69,6 +77,20 @@ test("copies JPEG metadata and updates XMP dimensions", () => {
   assert.match(text, /exif:PixelYDimension="1080"/);
 });
 
+test("copies JPEG metadata and updates XMP dimensions for square output", () => {
+  const source = jpeg(
+    segment(0xe1, ascii('http://ns.adobe.com/xap/1.0/\0<x:xmpmeta tiff:ImageWidth="3840" tiff:ImageLength="2160" exif:PixelXDimension="3840" exif:PixelYDimension="2160">keep</x:xmpmeta>'))
+  );
+  const output = jpeg(segment(0xdb, new Uint8Array([0, 0])));
+  const merged = core.mergeJpegMetadata(output, source, core.getOutputTarget("1x1"));
+  const text = asciiFromBytes(merged);
+
+  assert.match(text, /tiff:ImageWidth="3000"/);
+  assert.match(text, /tiff:ImageLength="3000"/);
+  assert.match(text, /exif:PixelXDimension="3000"/);
+  assert.match(text, /exif:PixelYDimension="3000"/);
+});
+
 test("updates EXIF dimension tags while preserving other EXIF bytes", () => {
   const exif = exifSegment();
   const source = jpeg(exif);
@@ -81,6 +103,19 @@ test("updates EXIF dimension tags while preserving other EXIF bytes", () => {
   assert.equal(readLe32(merged, exifStart + 10 + 8 + 14 + 8), 1080);
   assert.equal(readLe32(merged, exifStart + 10 + 50 + 2 + 8), 1920);
   assert.equal(readLe32(merged, exifStart + 10 + 50 + 14 + 8), 1080);
+});
+
+test("updates EXIF dimension tags for square output", () => {
+  const source = jpeg(exifSegment());
+  const output = jpeg(segment(0xdb, new Uint8Array([0, 0])));
+  const merged = core.mergeJpegMetadata(output, source, core.getOutputTarget("1x1"));
+  const exifStart = findSubarray(merged, ascii("Exif\0\0")) - 4;
+
+  assert.ok(exifStart >= 0);
+  assert.equal(readLe32(merged, exifStart + 10 + 8 + 2 + 8), 3000);
+  assert.equal(readLe32(merged, exifStart + 10 + 8 + 14 + 8), 3000);
+  assert.equal(readLe32(merged, exifStart + 10 + 50 + 2 + 8), 3000);
+  assert.equal(readLe32(merged, exifStart + 10 + 50 + 14 + 8), 3000);
 });
 
 function ascii(text) {
