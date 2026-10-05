@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HISTI V1.4</title>
+    <title>HISTI V1.5</title>
     <meta name="description" content="Honey, I Shrunk the Images converts 3840x2160 JPG files into 1920x1080 and 3000x3000 JPG copies in bulk.">
     <link rel="icon" type="image/png" href="assets/histi_icon.png">
     <link rel="apple-touch-icon" href="assets/histi_icon.png">
@@ -16,11 +16,11 @@
         <div class="brand-lockup">
           <img class="brand-icon" src="assets/histi_icon.png" alt="">
           <div>
-            <p class="eyebrow">HISTI <span data-version>V1.4</span></p>
+            <p class="eyebrow">HISTI <span data-version>V1.5</span></p>
             <h1>Honey, I Shrunk the Images</h1>
           </div>
         </div>
-        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.4/HISTI.V1_4.zip">Download App V1.4</a>
+        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.5/HISTI.V1_5.macOS.zip">Download Mac App V1.5</a>
       </header>
 
       <main class="workspace">
@@ -35,6 +35,8 @@
           <p id="status-line" class="status-line" aria-live="polite">Select one or more JPG files.</p>
         </section>
 
+        <progress id="batch-progress" class="batch-progress" aria-label="Batch progress" value="0" max="1" hidden></progress>
+
         <section class="tool-layout">
           <div class="input-panel">
             <div id="dropzone" class="dropzone">
@@ -44,7 +46,7 @@
 
             <div class="stat-grid" aria-label="Batch status">
               <div class="stat">
-                <span>Selected</span>
+                <span>Images</span>
                 <strong id="file-count">0</strong>
               </div>
               <div class="stat">
@@ -127,10 +129,20 @@
         <h2>Bulk Downloads</h2>
         <div>
           <ul>
+            <li>Select 100 or more 3840x2160 JPGs together; each produces two outputs.</li>
             <li>One ready image downloads as one JPG.</li>
             <li>Multiple ready images download together as a ZIP.</li>
             <li>Skipped files stay listed with the reason they were skipped.</li>
           </ul>
+        </div>
+      </section>
+
+      <section class="docs">
+        <h2>Mac App</h2>
+        <div>
+          <p>Unzip the Mac download, move <code>HISTI.app</code> to Applications, and open it. Supports Apple Silicon and Intel Macs running macOS 12 or later.</p>
+          <p>This release is not Apple-notarized. If macOS blocks the first launch, use System Settings &gt; Privacy &amp; Security &gt; Open Anyway.</p>
+          <p><a href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.5/HISTI.V1_5.web.zip">Offline web files V1.5</a> are also available.</p>
         </div>
       </section>
 
@@ -153,7 +165,7 @@
       </section>
 
       <footer>
-        HISTI V1.4. Source and releases are published at
+        HISTI V1.5. Source and releases are published at
         <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
       </footer>
     </div>

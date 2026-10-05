@@ -3,8 +3,8 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
-test("exposes the V1.4 display metadata", () => {
-  assert.equal(core.APP_VERSION, "V1.4");
+test("exposes the V1.5 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.5");
   assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
 });
 
@@ -31,8 +31,10 @@ test("preserves jpeg extension text and converts uppercase source token", () => 
   assert.equal(core.buildOutputFileName("sample_3840X2160.JPEG"), "sample_1920x1080.JPEG");
 });
 
-test("rejects files without the source token", () => {
-  assert.throws(() => core.buildOutputFileName("sample.jpg"), /3840x2160/);
+test("adds both output suffixes to filenames without a source token", () => {
+  assert.equal(core.buildOutputFileName("ActionBible_86.jpg"), "ActionBible_86_16x9_1920x1080.jpg");
+  assert.equal(core.buildOutputFileName("ActionBible_86.jpg", "1x1"), "ActionBible_86_1x1_3000x3000.jpg");
+  assert.equal(core.buildOutputFileName("sample_16x9.JPEG", "1x1"), "sample_1x1_3000x3000.JPEG");
 });
 
 test("rejects non-jpg files", () => {
@@ -53,6 +55,30 @@ test("creates a readable stored ZIP blob", async () => {
   assert.equal(bytes[0], 0x50);
   assert.equal(bytes[1], 0x4b);
   assert.ok(bytes.length > 100);
+});
+
+test("checksums large Blob payloads in chunks and reports ZIP progress", async () => {
+  const payload = Uint8Array.from({ length: 2 * 1024 * 1024 + 37 }, (_, index) => index % 251);
+  let chunks = 0;
+  class ChunkedBlob extends Blob {
+    arrayBuffer() { throw new Error("Must not read the entire payload at once"); }
+    slice(start, end) {
+      assert.ok(end - start <= 1024 * 1024);
+      chunks += 1;
+      return super.slice(start, end);
+    }
+  }
+  const progress = [];
+  const blob = await zip.createZipBlob([
+    { name: "large.jpg", blob: new ChunkedBlob([payload]) },
+    { name: "empty.jpg", blob: new Blob([]) },
+  ], (done, total) => progress.push([done, total]));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const view = new DataView(bytes.buffer);
+  assert.equal(chunks, 3);
+  assert.deepEqual(progress, [[1, 2], [2, 2]]);
+  assert.equal(view.getUint32(14, true), zip.crc32(payload));
+  assert.deepEqual(bytes.slice(39, 39 + payload.length), payload);
 });
 
 test("copies JPEG metadata and updates XMP dimensions", () => {

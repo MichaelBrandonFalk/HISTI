@@ -4,6 +4,7 @@
   const core = window.HISTI_CORE;
   const zip = window.HISTI_ZIP;
   const outputUrls = new Map();
+  const rowElements = new Map();
 
   const state = {
     items: [],
@@ -11,6 +12,7 @@
     processing: false,
   };
   let nextItemId = 1;
+  let nextSourceId = 1;
 
   const refs = {};
 
@@ -27,6 +29,7 @@
     refs.downloadAllButton = $("#download-all-button");
     refs.clearButton = $("#clear-button");
     refs.status = $("#status-line");
+    refs.progress = $("#batch-progress");
     refs.queueChoice = $("#queue-choice");
     refs.queueSummary = $("#queue-choice-summary");
     refs.queueAdd = $("#queue-add");
@@ -49,11 +52,19 @@
 
   function setBusy(isBusy) {
     state.processing = isBusy;
-    refs.processButton.disabled = isBusy || !hasQueuedJpegs();
+    renderControls();
+    refs.processButton.textContent = isBusy ? "Processing..." : "Process";
+  }
+
+  function renderControls() {
+    const isBusy = state.processing;
+    refs.processButton.disabled = isBusy || state.pendingItems.length > 0 || !hasQueuedJpegs();
     refs.pickButton.disabled = isBusy;
     refs.clearButton.disabled = isBusy || state.items.length === 0;
     refs.downloadAllButton.disabled = isBusy || readyItems().length === 0;
-    refs.processButton.textContent = isBusy ? "Processing..." : "Process";
+    refs.queueAdd.disabled = isBusy;
+    refs.queueReplace.disabled = isBusy;
+    refs.tableBody.querySelectorAll("button").forEach((button) => { button.disabled = isBusy; });
   }
 
   function resetObjectUrls() {
@@ -63,9 +74,11 @@
 
   function selectedFileItems(files) {
     return [...files].flatMap((file) => {
+      const sourceId = `source-${nextSourceId++}`;
       if (!core.isJpegFileName(file.name)) {
         const item = {
           id: `item-${nextItemId}`,
+          sourceId,
           file: null,
           targetId: "",
           targetLabel: "",
@@ -93,6 +106,7 @@
 
         const item = {
           id: `item-${nextItemId}`,
+          sourceId,
           file,
           targetId: target.id,
           targetLabel: target.label,
@@ -113,6 +127,9 @@
   }
 
   function handleSelectedFiles(files) {
+    if (state.processing) {
+      return;
+    }
     const items = selectedFileItems(files || []);
     refs.fileInput.value = "";
 
@@ -133,12 +150,14 @@
   function showQueueChoice(items) {
     refs.queueSummary.textContent = selectionSummary(items);
     refs.queueChoice.hidden = false;
+    renderControls();
     refs.queueAdd.focus();
   }
 
   function hideQueueChoice() {
     refs.queueChoice.hidden = true;
     state.pendingItems = [];
+    renderControls();
   }
 
   function applySelectedItems(items, mode) {
@@ -180,6 +199,8 @@
     refs.preview.hidden = true;
     refs.previewImage.removeAttribute("src");
     refs.previewName.textContent = "";
+    refs.progress.hidden = true;
+    refs.progress.value = 0;
     render();
     setStatus("Select one or more JPG files.", "");
   }
@@ -245,30 +266,26 @@
     });
   }
 
-  async function resizeImage(item) {
-    const file = item.file;
+  async function resizeImage(item, image, sourceBytes, width, height) {
     const target = core.getOutputTarget(item.targetId);
     const outputName = core.buildOutputFileName(item.inputName, target.id);
-    const sourceBytes = new Uint8Array(await file.arrayBuffer());
-    const image = await loadImage(file);
-    const width = image.width || image.naturalWidth;
-    const height = image.height || image.naturalHeight;
-    core.validateSourceDimensions(width, height);
-
     const canvas = document.createElement("canvas");
     canvas.width = target.width;
     canvas.height = target.height;
 
-    const context = canvas.getContext("2d", { alpha: false });
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    drawTargetImage(context, image, width, height, target);
-
-    if (typeof image.close === "function") {
-      image.close();
+    let rawBlob;
+    try {
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("Could not allocate image canvas.");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      drawTargetImage(context, image, width, height, target);
+      rawBlob = await canvasToJpeg(canvas);
+    } finally {
+      // Release the large pixel buffer before allocating the next output canvas.
+      canvas.width = 0;
+      canvas.height = 0;
     }
-
-    const rawBlob = await canvasToJpeg(canvas);
     const rawBytes = new Uint8Array(await rawBlob.arrayBuffer());
     const mergedBytes = core.mergeJpegMetadata(rawBytes, sourceBytes, target);
     const blob = new Blob([mergedBytes], { type: "image/jpeg" });
@@ -306,29 +323,51 @@
       return;
     }
 
-    render();
     setBusy(true);
-    setStatus("Processing JPG files...", "ready");
-
+    const sources = new Map();
     for (const item of state.items) {
-      if (!item.file || item.blob || item.error) {
-        continue;
+      if (item.file && !item.blob && !item.error) {
+        if (!sources.has(item.sourceId)) sources.set(item.sourceId, []);
+        sources.get(item.sourceId).push(item);
       }
+    }
+    let completed = 0;
+    refs.progress.max = sources.size;
+    refs.progress.value = 0;
+    refs.progress.hidden = false;
 
+    for (const items of sources.values()) {
+      let image;
+      setStatus(`Processing image ${completed + 1} of ${sources.size}...`, "ready");
       try {
-        Object.assign(item, await resizeImage(item));
+        const file = items[0].file;
+        const sourceBytes = new Uint8Array(await file.arrayBuffer());
+        image = await loadImage(file);
+        const width = image.width || image.naturalWidth;
+        const height = image.height || image.naturalHeight;
+        core.validateSourceDimensions(width, height);
+
+        for (const item of items) {
+          try {
+            Object.assign(item, await resizeImage(item, image, sourceBytes, width, height));
+          } catch (error) {
+            skipItem(item, error);
+          }
+          renderRow(item);
+        }
       } catch (error) {
-        Object.assign(item, {
-          outputName: "",
-          outputSize: 0,
-          sourceDimensions: "",
-          outputDimensions: "",
-          blob: null,
-          status: "Skipped",
-          error: error.message || "Could not process image.",
+        items.forEach((item) => {
+          skipItem(item, error);
+          renderRow(item);
         });
+      } finally {
+        if (typeof image?.close === "function") image.close();
+        if (image instanceof HTMLImageElement) image.removeAttribute("src");
+        completed += 1;
+        refs.progress.value = completed;
+        renderStats();
+        await new Promise((resolve) => window.setTimeout(resolve, 0));
       }
-      render();
     }
 
     const readyCount = readyItems().length;
@@ -344,6 +383,18 @@
     } else {
       setStatus(`${readyCount} output file${readyCount === 1 ? "" : "s"} ready.`, "success");
     }
+  }
+
+  function skipItem(item, error) {
+    Object.assign(item, {
+      outputName: "",
+      outputSize: 0,
+      sourceDimensions: "",
+      outputDimensions: "",
+      blob: null,
+      status: "Skipped",
+      error: error.message || "Could not process image.",
+    });
   }
 
   function showPreview(output) {
@@ -369,12 +420,18 @@
 
     setBusy(true);
     setStatus("Building ZIP...", "ready");
+    refs.progress.hidden = false;
+    refs.progress.max = outputs.length;
+    refs.progress.value = 0;
     try {
       const blob = await zip.createZipBlob(outputs.map((output) => ({
         name: output.outputName,
         blob: output.blob,
-      })));
-      downloadBlob(blob, "HISTI_V1_4_outputs.zip");
+      })), (completed) => {
+        refs.progress.value = completed;
+        setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
+      });
+      downloadBlob(blob, "HISTI_V1_5_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -386,13 +443,14 @@
   function renderStats() {
     const readyCount = readyItems().length;
     const errorCount = state.items.filter((item) => item.error).length;
-    refs.fileCount.textContent = String(state.items.length);
+    refs.fileCount.textContent = String(new Set(state.items.map((item) => item.sourceId)).size);
     refs.readyCount.textContent = String(readyCount);
     refs.errorCount.textContent = String(errorCount);
   }
 
   function renderRows() {
     refs.tableBody.innerHTML = "";
+    rowElements.clear();
 
     if (state.items.length === 0) {
       refs.emptyState.hidden = false;
@@ -401,45 +459,49 @@
 
     refs.emptyState.hidden = true;
 
-    const rows = state.items;
+    state.items.forEach(renderRow);
+  }
 
-    rows.forEach((row) => {
-      const tr = document.createElement("tr");
-      const action = document.createElement("td");
-      const original = document.createElement("td");
-      const output = document.createElement("td");
-      const status = document.createElement("td");
+  function renderRow(row) {
+    const tr = document.createElement("tr");
+    const action = document.createElement("td");
+    const original = document.createElement("td");
+    const output = document.createElement("td");
+    const status = document.createElement("td");
 
-      action.className = "download-cell";
-      original.append(createFileName(row.inputName));
-      if (row.inputSize) {
-        original.append(createMeta(core.formatBytes(row.inputSize)));
-      }
-      if (row.outputName) {
-        output.append(createFileName(row.outputName));
-      }
-      if (row.targetLabel) {
-        output.append(createMeta(row.targetLabel));
-      } else if (row.outputDimensions) {
-        output.append(createMeta(row.outputDimensions));
-      }
-      status.textContent = row.error || row.status;
-      status.dataset.status = row.blob ? "ready" : row.error ? "error" : "queued";
+    action.className = "download-cell";
+    original.append(createFileName(row.inputName));
+    if (row.inputSize) {
+      original.append(createMeta(core.formatBytes(row.inputSize)));
+    }
+    if (row.outputName) {
+      output.append(createFileName(row.outputName));
+    }
+    if (row.targetLabel) {
+      output.append(createMeta(row.targetLabel));
+    } else if (row.outputDimensions) {
+      output.append(createMeta(row.outputDimensions));
+    }
+    status.textContent = row.error || row.status;
+    status.dataset.status = row.blob ? "ready" : row.error ? "error" : "queued";
 
-      if (row.blob) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "tiny-button";
-        button.textContent = "Download JPG";
-        button.addEventListener("click", () => downloadBlob(row.blob, row.outputName));
-        action.append(button);
-      } else {
-        action.append(createMeta(row.status));
-      }
+    if (row.blob) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "tiny-button";
+      button.textContent = "Download JPG";
+      button.disabled = state.processing;
+      button.addEventListener("click", () => downloadBlob(row.blob, row.outputName));
+      action.append(button);
+    } else {
+      action.append(createMeta(row.status));
+    }
 
-      tr.append(action, original, output, status);
-      refs.tableBody.append(tr);
-    });
+    tr.append(action, original, output, status);
+    const previous = rowElements.get(row.id);
+    if (previous) previous.replaceWith(tr);
+    else refs.tableBody.append(tr);
+    rowElements.set(row.id, tr);
   }
 
   function createFileName(value) {
@@ -459,9 +521,7 @@
   function render() {
     renderStats();
     renderRows();
-    refs.processButton.disabled = state.processing || !hasQueuedJpegs();
-    refs.downloadAllButton.disabled = state.processing || readyItems().length === 0;
-    refs.clearButton.disabled = state.processing || state.items.length === 0;
+    renderControls();
   }
 
   function readyItems() {

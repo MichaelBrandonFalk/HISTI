@@ -9,7 +9,7 @@
 
   const APP_NAME = "HISTI";
   const DISPLAY_NAME = "Honey, I Shrunk the Images";
-  const APP_VERSION = "V1.4";
+  const APP_VERSION = "V1.5";
   const SOURCE_WIDTH = 3840;
   const SOURCE_HEIGHT = 2160;
   const TARGET_WIDTH = 1920;
@@ -90,7 +90,12 @@
     }
 
     if (!hasSourceToken(value)) {
-      throw new Error("File name must include 3840x2160.");
+      const extension = value.match(JPEG_EXTENSION_RE)[0];
+      const stem = value.slice(0, -extension.length);
+      const renamed = /16x9/i.test(stem)
+        ? stem.replace(SOURCE_RATIO_TOKEN_RE, target.ratioToken)
+        : `${stem}_${target.ratioToken}`;
+      return `${renamed}_${target.dimensionToken}${extension}`;
     }
 
     const renamed = value.replace(SOURCE_TOKEN_RE, target.dimensionToken);

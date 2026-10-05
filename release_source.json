@@ -1,8 +1,11 @@
 {
   "app": "HISTI",
   "display": "Honey, I Shrunk the Images",
-  "version": "V1.4",
-  "source_tag": "v1.4",
-  "download_package": "HISTI.V1_4.zip",
+  "version": "V1.5",
+  "source_tag": "v1.5",
+  "download_package": "HISTI.V1_5.macOS.zip",
+  "web_package": "HISTI.V1_5.web.zip",
+  "macos_minimum": "12.0",
+  "macos_architectures": ["arm64", "x86_64"],
   "pages_source": "main:/"
 }

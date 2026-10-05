@@ -1,5 +1,15 @@
 # Changelog
 
+## V1.5 - 2026-10-05
+
+- Replaced the main download with a launchable `HISTI.app` for Apple Silicon and Intel Macs (macOS 12+), using the supplied app icon.
+- Added native file selection and save dialogs for individual JPG and ZIP downloads.
+- Processed sources sequentially, decoding each image once for both outputs and releasing output canvases immediately.
+- Added image and ZIP progress, accurate source-image counts, and incremental result-row updates for large batches.
+- Reduced ZIP memory use by retaining Blob payloads and calculating checksums in small chunks.
+- Added output suffixes for filenames without a source-size token, including `ActionBible_86.jpg`.
+- Kept a separately labeled offline web package; both packages embed the hosted page's versioned source.
+
 ## V1.4 - 2026-08-20
 
 - Added default dual-output generation for each valid JPG: `16x9_1920x1080` and `1x1_3000x3000`.

@@ -22,12 +22,15 @@
     return table;
   }
 
-  function crc32(bytes) {
-    let crc = 0xffffffff;
+  function updateCrc(crc, bytes) {
     for (let i = 0; i < bytes.length; i += 1) {
       crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
     }
-    return (crc ^ 0xffffffff) >>> 0;
+    return crc;
+  }
+
+  function crc32(bytes) {
+    return (updateCrc(0xffffffff, bytes) ^ 0xffffffff) >>> 0;
   }
 
   function encodeText(value) {
@@ -59,32 +62,41 @@
     return { bytes, view: new DataView(bytes.buffer) };
   }
 
-  async function toBytes(file) {
+  async function zipData(file) {
     const data = file.data || file.blob;
     if (data instanceof Uint8Array) {
-      return data;
+      return { part: data, size: data.length, crc: crc32(data) };
     }
     if (data instanceof ArrayBuffer) {
-      return new Uint8Array(data);
+      const bytes = new Uint8Array(data);
+      return { part: bytes, size: bytes.length, crc: crc32(bytes) };
     }
-    if (data && typeof data.arrayBuffer === "function") {
-      return new Uint8Array(await data.arrayBuffer());
+    if (data instanceof Blob) {
+      let crc = 0xffffffff;
+      // Keep payloads as Blobs; checksum only one small chunk at a time.
+      for (let offset = 0; offset < data.size; offset += 1024 * 1024) {
+        const bytes = new Uint8Array(await data.slice(offset, offset + 1024 * 1024).arrayBuffer());
+        crc = updateCrc(crc, bytes);
+      }
+      return { part: data, size: data.size, crc: (crc ^ 0xffffffff) >>> 0 };
     }
     throw new Error(`Cannot ZIP ${file.name}.`);
   }
 
-  async function createZipBlob(files) {
+  async function createZipBlob(files, onProgress = () => {}) {
+    if (files.length > 0xffff) throw new Error("Too many files for a ZIP archive.");
     const localParts = [];
     const centralParts = [];
     const now = dateParts(new Date());
     let offset = 0;
+    let completed = 0;
 
     for (const file of files) {
       const nameBytes = encodeText(file.name);
-      const dataBytes = await toBytes(file);
-      const crc = crc32(dataBytes);
+      const data = await zipData(file);
+      const crc = data.crc;
 
-      if (dataBytes.length > 0xffffffff || offset > 0xffffffff) {
+      if (nameBytes.length > 0xffff || data.size > 0xffffffff || offset + 30 + nameBytes.length + data.size > 0xffffffff) {
         throw new Error("ZIP output is too large.");
       }
 
@@ -96,8 +108,8 @@
       local.view.setUint16(10, now.dosTime, true);
       local.view.setUint16(12, now.dosDate, true);
       local.view.setUint32(14, crc, true);
-      local.view.setUint32(18, dataBytes.length, true);
-      local.view.setUint32(22, dataBytes.length, true);
+      local.view.setUint32(18, data.size, true);
+      local.view.setUint32(22, data.size, true);
       local.view.setUint16(26, nameBytes.length, true);
       local.view.setUint16(28, 0, true);
       setBytes(local.bytes, 30, nameBytes);
@@ -111,8 +123,8 @@
       central.view.setUint16(12, now.dosTime, true);
       central.view.setUint16(14, now.dosDate, true);
       central.view.setUint32(16, crc, true);
-      central.view.setUint32(20, dataBytes.length, true);
-      central.view.setUint32(24, dataBytes.length, true);
+      central.view.setUint32(20, data.size, true);
+      central.view.setUint32(24, data.size, true);
       central.view.setUint16(28, nameBytes.length, true);
       central.view.setUint16(30, 0, true);
       central.view.setUint16(32, 0, true);
@@ -122,13 +134,16 @@
       central.view.setUint32(42, offset, true);
       setBytes(central.bytes, 46, nameBytes);
 
-      localParts.push(local.bytes, dataBytes);
+      localParts.push(local.bytes, data.part);
       centralParts.push(central.bytes);
-      offset += local.bytes.length + dataBytes.length;
+      offset += local.bytes.length + data.size;
+      onProgress(++completed, files.length);
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     const centralOffset = offset;
     const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+    if (centralOffset + centralSize + 22 > 0xffffffff) throw new Error("ZIP output is too large.");
     const end = makeHeader(22);
     end.view.setUint32(0, 0x06054b50, true);
     end.view.setUint16(4, 0, true);
