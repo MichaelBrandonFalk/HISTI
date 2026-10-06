@@ -9,7 +9,7 @@
 
   const APP_NAME = "HISTI";
   const DISPLAY_NAME = "Honey, I Shrunk the Images";
-  const APP_VERSION = "V1.5";
+  const APP_VERSION = "V1.6";
   const SOURCE_WIDTH = 3840;
   const SOURCE_HEIGHT = 2160;
   const TARGET_WIDTH = 1920;

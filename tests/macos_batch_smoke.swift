@@ -4,14 +4,17 @@ import WebKit
 class BatchSmokeDelegate: HISTIAppDelegate {
     let fixtures: URL
     let outputDirectory: URL
+    let mode: String
+    var expectedOutputs: Int { mode == "both" ? 200 : 100 }
     private var started = Date()
     private var stage = "loading"
     private var timer: Timer?
     private var lastProgress = ""
 
-    init(fixtures: URL, output: URL) {
+    init(fixtures: URL, output: URL, mode: String) {
         self.fixtures = fixtures
         self.outputDirectory = output
+        self.mode = mode
         super.init()
     }
 
@@ -39,7 +42,7 @@ class BatchSmokeDelegate: HISTIAppDelegate {
             stage = "zip"
             webView.evaluateJavaScript("document.getElementById('download-all-button').click()", completionHandler: nil)
         } else if url.pathExtension == "zip" && stage == "zip" {
-            print("PASS: native picker processed 100 JPGs into 200 outputs, skipped PNG, saved JPG and ZIP (\(Int(Date().timeIntervalSince(started)))s)")
+            print("PASS: \(mode): 100 JPGs into \(expectedOutputs) outputs, skipped PNG, saved JPG and ZIP (\(Int(Date().timeIntervalSince(started)))s)")
             timer?.invalidate()
             NSApp.terminate(nil)
         }
@@ -47,25 +50,33 @@ class BatchSmokeDelegate: HISTIAppDelegate {
 
     func poll() {
         if Date().timeIntervalSince(started) > 600 { fail("Timed out in stage \(stage)") }
-        webView.evaluateJavaScript("({version: window.HISTI_CORE?.APP_VERSION, count: document.getElementById('results-body')?.rows.length, ready: document.getElementById('ready-count')?.textContent, skipped: document.getElementById('error-count')?.textContent, busy: document.getElementById('process-button')?.textContent, status: document.getElementById('status-line')?.textContent})") { value, error in
+        webView.evaluateJavaScript("({version: window.HISTI_CORE?.APP_VERSION, count: document.getElementById('results-body')?.rows.length, ready: document.getElementById('ready-count')?.textContent, skipped: document.getElementById('error-count')?.textContent, busy: document.getElementById('process-button')?.textContent, status: document.getElementById('status-line')?.textContent, locked: [...document.querySelectorAll('[data-output-target]')].every(input => input.disabled)})") { value, error in
             if let error = error {
                 if self.stage != "loading" { self.fail(error.localizedDescription) }
                 return
             }
             guard let status = value as? [String: Any] else { return }
-            if self.stage == "loading", status["version"] as? String == "V1.5" {
+            if self.stage == "loading", status["version"] as? String == "V1.6" {
                 self.stage = "selection"
-                self.selectImages()
-            } else if self.stage == "selection", status["count"] as? Int == 201 {
+                let script = self.mode == "16x9" ? "document.getElementById('output-square').click()"
+                    : self.mode == "1x1" ? "document.getElementById('output-landscape').click()" : "true"
+                self.webView.evaluateJavaScript(script) { _, error in
+                    if let error = error { self.fail(error.localizedDescription) }
+                    self.selectImages()
+                }
+            } else if self.stage == "selection", status["count"] as? Int == self.expectedOutputs + 1 {
                 guard status["skipped"] as? String == "1" else { self.fail("PNG not immediately skipped") }
                 self.stage = "processing"
                 self.webView.evaluateJavaScript("document.getElementById('process-button').click()", completionHandler: nil)
             } else if self.stage == "processing", status["busy"] as? String == "Process" {
-                guard status["ready"] as? String == "200", status["skipped"] as? String == "1" else {
+                guard status["ready"] as? String == String(self.expectedOutputs), status["skipped"] as? String == "1" else {
                     self.fail("Wrong batch result: \(status)")
                 }
                 self.stage = "individual"
                 self.webView.evaluateJavaScript("document.querySelector('#results-body button').click()", completionHandler: nil)
+            }
+            if status["busy"] as? String == "Processing...", status["locked"] as? Bool != true {
+                self.fail("Output choices were not locked during processing")
             }
             let progress = status["status"] as? String ?? ""
             if progress != self.lastProgress { print(progress); self.lastProgress = progress }
@@ -83,12 +94,15 @@ class BatchSmokeDelegate: HISTIAppDelegate {
 @main struct BatchSmoke {
     static func main() throws {
         setbuf(stdout, nil)
-        guard CommandLine.arguments.count == 3 else { fatalError("Expected fixture and output paths") }
+        guard CommandLine.arguments.count == 4 else { fatalError("Expected fixture path, output path and mode") }
+        let mode = CommandLine.arguments[3]
+        precondition(["both", "16x9", "1x1"].contains(mode))
         let output = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         // Also exercise replacement of an existing file through the normal save path.
-        try Data("previous output".utf8).write(to: output.appendingPathComponent("ActionBible_051_16x9_1920x1080.jpg"))
-        let delegate = BatchSmokeDelegate(fixtures: URL(fileURLWithPath: CommandLine.arguments[1]), output: output)
+        let firstName = mode == "1x1" ? "ActionBible_051_1x1_3000x3000.jpg" : "ActionBible_051_16x9_1920x1080.jpg"
+        try Data("previous output".utf8).write(to: output.appendingPathComponent(firstName))
+        let delegate = BatchSmokeDelegate(fixtures: URL(fileURLWithPath: CommandLine.arguments[1]), output: output, mode: mode)
         let app = NSApplication.shared
         app.setActivationPolicy(.regular)
         app.delegate = delegate

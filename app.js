@@ -10,6 +10,7 @@
     items: [],
     pendingItems: [],
     processing: false,
+    enabledTargets: new Set(core.OUTPUT_TARGETS.map((target) => target.id)),
   };
   let nextItemId = 1;
   let nextSourceId = 1;
@@ -30,6 +31,7 @@
     refs.clearButton = $("#clear-button");
     refs.status = $("#status-line");
     refs.progress = $("#batch-progress");
+    refs.outputOptions = [...document.querySelectorAll("[data-output-target]")];
     refs.queueChoice = $("#queue-choice");
     refs.queueSummary = $("#queue-choice-summary");
     refs.queueAdd = $("#queue-add");
@@ -64,6 +66,7 @@
     refs.downloadAllButton.disabled = isBusy || readyItems().length === 0;
     refs.queueAdd.disabled = isBusy;
     refs.queueReplace.disabled = isBusy;
+    refs.outputOptions.forEach((input) => { input.disabled = isBusy; });
     refs.tableBody.querySelectorAll("button").forEach((button) => { button.disabled = isBusy; });
   }
 
@@ -177,8 +180,13 @@
   }
 
   function selectionSummary(items, verb = "Selected") {
-    const outputs = items.filter((item) => item.file).length;
-    const skipped = items.length - outputs;
+    if (state.enabledTargets.size === 0) {
+      const sources = new Set(items.map((item) => item.sourceId)).size;
+      return `${verb} ${sources} images; select at least one output size.`;
+    }
+    const active = items.filter(isEnabledItem);
+    const outputs = active.filter((item) => item.file).length;
+    const skipped = active.length - outputs;
     const noun = outputs === 1 ? "output" : "outputs";
     if (skipped > 0) {
       return `${verb} ${outputs} ${noun}; ${skipped} skipped.`;
@@ -187,7 +195,30 @@
   }
 
   function statusKindForItems(items) {
-    return items.some((item) => item.error) ? "warn" : "ready";
+    return state.enabledTargets.size === 0 || items.some((item) => isEnabledItem(item) && item.error) ? "warn" : "ready";
+  }
+
+  function isEnabledItem(item) {
+    return !item.targetId || state.enabledTargets.has(item.targetId);
+  }
+
+  function changeOutputOptions() {
+    if (state.processing) return;
+    state.enabledTargets = new Set(refs.outputOptions.filter((input) => input.checked)
+      .map((input) => input.dataset.outputTarget));
+    refs.progress.hidden = true;
+    render();
+    const outputs = readyItems();
+    showPreview(outputs.at(-1));
+    if (state.pendingItems.length > 0) refs.queueSummary.textContent = selectionSummary(state.pendingItems);
+    if (state.enabledTargets.size === 0) {
+      setStatus("Select at least one output size.", "warn");
+    } else if (state.items.length === 0) {
+      setStatus("Select one or more JPG files.", "");
+    } else {
+      const queued = state.items.filter((item) => isEnabledItem(item) && item.file && !item.blob && !item.error).length;
+      setStatus(`${queued} outputs queued; ${outputs.length} ready.`, statusKindForItems(state.items));
+    }
   }
 
   function clearAll() {
@@ -202,7 +233,7 @@
     refs.progress.hidden = true;
     refs.progress.value = 0;
     render();
-    setStatus("Select one or more JPG files.", "");
+    setStatus(state.enabledTargets.size > 0 ? "Select one or more JPG files." : "Select at least one output size.", state.enabledTargets.size > 0 ? "" : "warn");
   }
 
   function outputUrl(output) {
@@ -319,14 +350,14 @@
   }
 
   async function processFiles() {
-    if (state.processing || !hasQueuedJpegs()) {
+    if (state.processing || state.pendingItems.length > 0 || !hasQueuedJpegs()) {
       return;
     }
 
     setBusy(true);
     const sources = new Map();
     for (const item of state.items) {
-      if (item.file && !item.blob && !item.error) {
+      if (isEnabledItem(item) && item.file && !item.blob && !item.error) {
         if (!sources.has(item.sourceId)) sources.set(item.sourceId, []);
         sources.get(item.sourceId).push(item);
       }
@@ -371,7 +402,7 @@
     }
 
     const readyCount = readyItems().length;
-    const errorCount = state.items.filter((item) => item.error).length;
+    const errorCount = state.items.filter((item) => isEnabledItem(item) && item.error).length;
     setBusy(false);
 
     if (readyCount > 0) {
@@ -431,7 +462,7 @@
         refs.progress.value = completed;
         setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
       });
-      downloadBlob(blob, "HISTI_V1_5_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_6_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -442,7 +473,7 @@
 
   function renderStats() {
     const readyCount = readyItems().length;
-    const errorCount = state.items.filter((item) => item.error).length;
+    const errorCount = state.items.filter((item) => isEnabledItem(item) && item.error).length;
     refs.fileCount.textContent = String(new Set(state.items.map((item) => item.sourceId)).size);
     refs.readyCount.textContent = String(readyCount);
     refs.errorCount.textContent = String(errorCount);
@@ -452,14 +483,16 @@
     refs.tableBody.innerHTML = "";
     rowElements.clear();
 
-    if (state.items.length === 0) {
+    const items = state.items.filter(isEnabledItem);
+    if (items.length === 0) {
       refs.emptyState.hidden = false;
+      refs.emptyState.textContent = state.items.length > 0 ? "No outputs enabled." : "No files queued.";
       return;
     }
 
     refs.emptyState.hidden = true;
 
-    state.items.forEach(renderRow);
+    items.forEach(renderRow);
   }
 
   function renderRow(row) {
@@ -525,15 +558,19 @@
   }
 
   function readyItems() {
-    return state.items.filter((item) => item.blob);
+    return state.items.filter((item) => isEnabledItem(item) && item.blob);
   }
 
   function hasQueuedJpegs() {
-    return state.items.some((item) => item.file && !item.blob && !item.error);
+    return state.items.some((item) => isEnabledItem(item) && item.file && !item.blob && !item.error);
   }
 
   function bindEvents() {
     refs.version.textContent = core.APP_VERSION;
+    refs.outputOptions.forEach((input) => {
+      input.checked = state.enabledTargets.has(input.dataset.outputTarget);
+      input.addEventListener("change", changeOutputOptions);
+    });
 
     refs.pickButton.addEventListener("click", () => refs.fileInput.click());
     refs.fileInput.addEventListener("change", (event) => handleSelectedFiles(event.target.files || []));

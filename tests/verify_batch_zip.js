@@ -4,10 +4,12 @@ const path = require("node:path");
 const core = require("../histi_core.js");
 const { crc32 } = require("../zip_store.js");
 
-const [archive, fixtures] = process.argv.slice(2);
+const [archive, fixtures, mode = "both"] = process.argv.slice(2);
+assert.ok(["both", "16x9", "1x1"].includes(mode));
+const targets = core.OUTPUT_TARGETS.filter((target) => mode === "both" || target.id === mode);
 const expected = new Map();
 for (const name of fs.readdirSync(fixtures).filter((name) => /\.jpg$/.test(name))) {
-  for (const target of core.OUTPUT_TARGETS) expected.set(core.buildOutputFileName(name, target.id), { name, target });
+  for (const target of targets) expected.set(core.buildOutputFileName(name, target.id), { name, target });
 }
 
 function dimensions(bytes) {
@@ -54,7 +56,7 @@ try {
     count += 1;
     payloadSize += length;
   }
-  assert.equal(count, 200);
+  assert.equal(count, 100 * targets.length);
   assert.equal(seen.size, expected.size);
   console.log(`PASS: all ${count} JPGs have correct filenames, dimensions, CRCs and preserved metadata (${(payloadSize / 1024 / 1024).toFixed(1)} MB)`);
 } finally {

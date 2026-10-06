@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.6 - 2026-10-06
+
+- Added independent 1920x1080 (16x9) and 3000x3000 (1x1) output checkboxes, both enabled by default.
+- Applied output choices to the existing queue, processing, ready counts, previews and downloads.
+- Reused completed outputs when re-enabled, and disabled processing/downloads when neither output is selected.
+- Locked output choices during processing and ZIP creation.
+- Updated the launchable Mac app and offline web package from the same versioned source.
+
 ## V1.5 - 2026-10-05
 
 - Replaced the main download with a launchable `HISTI.app` for Apple Silicon and Intel Macs (macOS 12+), using the supplied app icon.

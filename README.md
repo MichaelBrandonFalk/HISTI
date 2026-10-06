@@ -6,7 +6,7 @@ The app displays as **Honey, I Shrunk the Images**.
 
 ## Version
 
-Current public version: `V1.5`
+Current public version: `V1.6`
 
 ## Browser App
 
@@ -20,13 +20,13 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 Download the launchable Mac app:
 
-- [HISTI.V1_5.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.5/HISTI.V1_5.macOS.zip)
+- [HISTI.V1_6.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.macOS.zip)
 
 Unzip, move `HISTI.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
 
 This release is ad-hoc signed, not Apple-notarized. If macOS blocks its first launch, use System Settings > Privacy & Security > Open Anyway. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
-The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.5/HISTI.V1_5.web.zip) remain available separately. Open their `index.html` in a browser.
+The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.web.zip) remain available separately. Open their `index.html` in a browser.
 
 ## What It Does
 
@@ -34,7 +34,9 @@ The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/dow
 - Shows non-JPG selections immediately as skipped rows.
 - Prompts to Add or Replace when a queue already exists and another selection is made.
 - Checks that each source image is exactly `3840x2160`.
-- Creates both a `16x9_1920x1080` JPG copy and a `1x1_3000x3000` JPG copy.
+- Creates both a `16x9_1920x1080` JPG copy and a `1x1_3000x3000` JPG copy by default.
+- Lets either output size be turned off independently. Choices update the current queue and all downloads. Completed outputs remain available if re-enabled.
+- Disables processing and downloads when both output sizes are off; locks the choices while a batch or ZIP is being processed.
 - Changes the resolution token for 16x9 outputs and changes `16x9_3840x2160` to `1x1_3000x3000` for square outputs.
 - If the filename has no size token, appends the output ratio and dimensions: `ActionBible_86.jpg` becomes `ActionBible_86_16x9_1920x1080.jpg` and `ActionBible_86_1x1_3000x3000.jpg`.
 - Downloads one output JPG directly or multiple outputs as a ZIP.
@@ -62,13 +64,13 @@ The 16x9 output is scaled to 1920x1080 with no crop. The 1x1 output is scaled un
 Run the versioned build script from this directory:
 
 ```bash
-bash ./build_histi_v1_5.sh
+bash ./build_histi_v1_6.sh
 ```
 
 The script creates:
 
-- `downloads/HISTI.V1_5.macOS.zip` containing `HISTI.app`
-- `downloads/HISTI.V1_5.web.zip` containing the offline web files
+- `downloads/HISTI.V1_6.macOS.zip` containing `HISTI.app`
+- `downloads/HISTI.V1_6.web.zip` containing the offline web files
 
 Requires Apple's Command Line Tools. Set `HISTI_SIGN_IDENTITY` and `HISTI_NOTARY_PROFILE` to build a Developer ID signed and notarized release when those credentials are available. With no credentials, the build uses ad-hoc signing.
 
@@ -79,7 +81,7 @@ node scripts/verify_packages.js
 node --test tests/core.test.js
 ```
 
-Run the Mac integration check (opens a test window, selects 100 full-size JPGs and a PNG through the native picker, saves a JPG and the 200-file ZIP, and validates names, dimensions and metadata):
+Run the Mac integration check (opens a test window and runs 100 full-size JPGs and a PNG in both-output, landscape-only and square-only modes, validating JPG/ZIP downloads, names, dimensions, metadata and crop pixels):
 
 ```bash
 bash scripts/test_macos_batch.sh
