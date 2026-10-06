@@ -10,6 +10,7 @@
     items: [],
     pendingItems: [],
     processing: false,
+    showSkipped: false,
     enabledTargets: new Set(core.OUTPUT_TARGETS.map((target) => target.id)),
   };
   let nextItemId = 1;
@@ -42,6 +43,10 @@
     refs.fileCount = $("#file-count");
     refs.readyCount = $("#ready-count");
     refs.errorCount = $("#error-count");
+    refs.showSkippedButton = $("#show-skipped-button");
+    refs.showAllButton = $("#show-all-button");
+    refs.resultsFilter = $("#results-filter");
+    refs.resultsWrap = $(".results-wrap");
     refs.preview = $("#preview");
     refs.previewImage = $("#preview-image");
     refs.previewName = $("#preview-name");
@@ -166,6 +171,7 @@
   function applySelectedItems(items, mode) {
     if (mode === "replace") {
       resetObjectUrls();
+      state.showSkipped = false;
       state.items = items;
       refs.preview.hidden = true;
       refs.previewImage.removeAttribute("src");
@@ -223,6 +229,7 @@
 
   function clearAll() {
     resetObjectUrls();
+    state.showSkipped = false;
     state.items = [];
     state.pendingItems = [];
     refs.fileInput.value = "";
@@ -429,7 +436,7 @@
   }
 
   function showPreview(output) {
-    if (!output || !output.blob) {
+    if (state.showSkipped || !output || !output.blob) {
       refs.preview.hidden = true;
       return;
     }
@@ -462,7 +469,7 @@
         refs.progress.value = completed;
         setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
       });
-      downloadBlob(blob, "HISTI_V1_6_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_7_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -477,25 +484,38 @@
     refs.fileCount.textContent = String(new Set(state.items.map((item) => item.sourceId)).size);
     refs.readyCount.textContent = String(readyCount);
     refs.errorCount.textContent = String(errorCount);
+    refs.showSkippedButton.setAttribute("aria-pressed", String(state.showSkipped));
+    refs.resultsFilter.hidden = !state.showSkipped;
+    refs.resultsWrap.classList.toggle("skipped-view", state.showSkipped);
+    updateEmptyState();
+  }
+
+  function visibleItems() {
+    return state.items.filter((item) => isEnabledItem(item) && (!state.showSkipped || item.error));
+  }
+
+  function updateEmptyState() {
+    refs.emptyState.hidden = visibleItems().length > 0;
+    refs.emptyState.textContent = state.showSkipped ? "No skipped files."
+      : state.items.length > 0 ? "No outputs enabled." : "No files queued.";
+  }
+
+  function changeResultsFilter(showSkipped) {
+    state.showSkipped = showSkipped;
+    render();
+    showPreview(readyItems().at(-1));
   }
 
   function renderRows() {
     refs.tableBody.innerHTML = "";
     rowElements.clear();
 
-    const items = state.items.filter(isEnabledItem);
-    if (items.length === 0) {
-      refs.emptyState.hidden = false;
-      refs.emptyState.textContent = state.items.length > 0 ? "No outputs enabled." : "No files queued.";
-      return;
-    }
-
-    refs.emptyState.hidden = true;
-
-    items.forEach(renderRow);
+    updateEmptyState();
+    visibleItems().forEach(renderRow);
   }
 
   function renderRow(row) {
+    if (!isEnabledItem(row) || (state.showSkipped && !row.error)) return;
     const tr = document.createElement("tr");
     const action = document.createElement("td");
     const original = document.createElement("td");
@@ -507,6 +527,7 @@
     if (row.inputSize) {
       original.append(createMeta(core.formatBytes(row.inputSize)));
     }
+    if (state.showSkipped && row.targetLabel) original.append(createMeta(row.targetLabel));
     if (row.outputName) {
       output.append(createFileName(row.outputName));
     }
@@ -567,6 +588,7 @@
 
   function bindEvents() {
     refs.version.textContent = core.APP_VERSION;
+    if (window.HISTI_NATIVE_APP === true) $(".app-download").hidden = true;
     refs.outputOptions.forEach((input) => {
       input.checked = state.enabledTargets.has(input.dataset.outputTarget);
       input.addEventListener("change", changeOutputOptions);
@@ -577,6 +599,8 @@
     refs.processButton.addEventListener("click", processFiles);
     refs.downloadAllButton.addEventListener("click", downloadAll);
     refs.clearButton.addEventListener("click", clearAll);
+    refs.showSkippedButton.addEventListener("click", () => changeResultsFilter(!state.showSkipped));
+    refs.showAllButton.addEventListener("click", () => changeResultsFilter(false));
     refs.queueAdd.addEventListener("click", () => applySelectedItems(state.pendingItems, "add"));
     refs.queueReplace.addEventListener("click", () => applySelectedItems(state.pendingItems, "replace"));
     refs.queueCancel.addEventListener("click", hideQueueChoice);

@@ -56,7 +56,7 @@ class BatchSmokeDelegate: HISTIAppDelegate {
                 return
             }
             guard let status = value as? [String: Any] else { return }
-            if self.stage == "loading", status["version"] as? String == "V1.6" {
+            if self.stage == "loading", status["version"] as? String == "V1.7" {
                 self.stage = "selection"
                 let script = self.mode == "16x9" ? "document.getElementById('output-square').click()"
                     : self.mode == "1x1" ? "document.getElementById('output-landscape').click()" : "true"

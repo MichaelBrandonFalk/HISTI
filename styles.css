@@ -117,6 +117,10 @@ h1 {
   color: #fff;
 }
 
+.app-download[hidden] {
+  display: none;
+}
+
 .app-download:hover {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
@@ -357,6 +361,38 @@ h1 {
   line-height: 1;
 }
 
+.stat-filter {
+  text-align: left;
+  color: var(--ink);
+}
+
+.stat-filter:hover,
+.stat-filter[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.stat .stat-link {
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  text-transform: none;
+  text-decoration: underline;
+}
+
+.results-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.results-filter[hidden] {
+  display: none;
+}
+
 .rule-strip {
   display: grid;
   gap: 7px;
@@ -447,6 +483,22 @@ table {
   border-collapse: collapse;
 }
 
+.skipped-view table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.skipped-view th:first-child,
+.skipped-view td:first-child,
+.skipped-view th:nth-child(3),
+.skipped-view td:nth-child(3) {
+  display: none;
+}
+
+.skipped-view th:nth-child(2) {
+  width: 60%;
+}
+
 th,
 td {
   border-bottom: 1px solid var(--line);
@@ -523,6 +575,10 @@ td[data-status="queued"] {
   min-height: 260px;
   color: var(--muted);
   font-weight: 750;
+}
+
+.empty-state[hidden] {
+  display: none;
 }
 
 .docs {

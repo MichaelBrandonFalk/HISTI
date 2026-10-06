@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.7 - 2026-10-06
+
+- Hidden the app-download button inside the native Mac app while retaining it on the website.
+- Packaged the native application as `HISTI v1.7.app` with matching bundle version metadata.
+- Made the Skipped counter open a skipped-only results view with filenames and reasons, plus Show All to return to the full queue.
+- Kept filtering separate from processing and downloads, and packaged both editions from the same versioned web source.
+
 ## V1.6 - 2026-10-06
 
 - Added independent 1920x1080 (16x9) and 3000x3000 (1x1) output checkboxes, both enabled by default.

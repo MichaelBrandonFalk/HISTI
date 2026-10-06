@@ -21,7 +21,7 @@ async (page) => {
     const pending = page.waitForEvent("download");
     await downloadAll.click();
     const download = await pending;
-    check(download.suggestedFilename() === "HISTI_V1_6_outputs.zip", "Wrong ZIP version");
+    check(download.suggestedFilename() === "HISTI_V1_7_outputs.zip", "Wrong ZIP version");
     await download.saveAs(`/tmp/histi-v16-toggle-${mode}.zip`);
     check(await download.failure() === null, "ZIP download failed");
   };

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HISTI V1.6</title>
+    <title>HISTI V1.7</title>
     <meta name="description" content="Honey, I Shrunk the Images converts 3840x2160 JPG files into 1920x1080 and 3000x3000 JPG copies in bulk.">
     <link rel="icon" type="image/png" href="assets/histi_icon.png">
     <link rel="apple-touch-icon" href="assets/histi_icon.png">
@@ -16,11 +16,11 @@
         <div class="brand-lockup">
           <img class="brand-icon" src="assets/histi_icon.png" alt="">
           <div>
-            <p class="eyebrow">HISTI <span data-version>V1.6</span></p>
+            <p class="eyebrow">HISTI <span data-version>V1.7</span></p>
             <h1>Honey, I Shrunk the Images</h1>
           </div>
         </div>
-        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.macOS.zip">Download Mac App V1.6</a>
+        <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.macOS.zip">Download Mac App V1.7</a>
       </header>
 
       <main class="workspace">
@@ -59,10 +59,11 @@
                 <span>Ready</span>
                 <strong id="ready-count">0</strong>
               </div>
-              <div class="stat">
+              <button id="show-skipped-button" class="stat stat-filter" type="button" aria-pressed="false" aria-controls="results-body" title="Show skipped files">
                 <span>Skipped</span>
                 <strong id="error-count">0</strong>
-              </div>
+                <span class="stat-link">View files</span>
+              </button>
             </div>
 
             <div class="rule-strip" aria-label="Output rule">
@@ -89,6 +90,10 @@
             </section>
 
             <section class="results-wrap" aria-label="Image results">
+              <div id="results-filter" class="results-filter" hidden>
+                <strong>Skipped Files</strong>
+                <button id="show-all-button" class="secondary-action" type="button">Show All</button>
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -146,9 +151,9 @@
       <section class="docs">
         <h2>Mac App</h2>
         <div>
-          <p>Unzip the Mac download, move <code>HISTI.app</code> to Applications, and open it. Supports Apple Silicon and Intel Macs running macOS 12 or later.</p>
+          <p>Unzip the Mac download, move <code>HISTI v1.7.app</code> to Applications, and open it. Supports Apple Silicon and Intel Macs running macOS 12 or later.</p>
           <p>This release is not Apple-notarized. If macOS blocks the first launch, use System Settings &gt; Privacy &amp; Security &gt; Open Anyway.</p>
-          <p><a href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.web.zip">Offline web files V1.6</a> are also available.</p>
+          <p><a href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.web.zip">Offline web files V1.7</a> are also available.</p>
         </div>
       </section>
 
@@ -171,7 +176,7 @@
       </section>
 
       <footer>
-        HISTI V1.6. Source and releases are published at
+        HISTI V1.7. Source and releases are published at
         <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
       </footer>
     </div>

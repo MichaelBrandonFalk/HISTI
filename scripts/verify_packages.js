@@ -7,8 +7,8 @@ const root = path.resolve(__dirname, "..");
 const files = ["index.html", "styles.css", "app.js", "histi_core.js", "zip_store.js", "site.webmanifest",
   "release_source.json", "README.md", "CHANGELOG.md", "VERSION", "assets/histi_icon.png"];
 const packages = [
-  ["HISTI.V1_6.macOS.zip", "HISTI.app/Contents/Resources/site"],
-  ["HISTI.V1_6.web.zip", "HISTI V1_6 Web"],
+  ["HISTI.V1_7.macOS.zip", "HISTI v1.7.app/Contents/Resources/site"],
+  ["HISTI.V1_7.web.zip", "HISTI V1_7 Web"],
 ];
 
 for (const [name, prefix] of packages) {

@@ -9,6 +9,9 @@ class HISTIAppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, W
     func applicationDidFinishLaunching(_ notification: Notification) {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: "window.HISTI_NATIVE_APP = true;",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self

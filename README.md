@@ -6,7 +6,9 @@ The app displays as **Honey, I Shrunk the Images**.
 
 ## Version
 
-Current public version: `V1.6`
+Current public version: `V1.7`
+
+The Mac bundle is named `HISTI v1.7.app`. Its header omits the download-app button; the browser version retains it. Select the Skipped counter to view only skipped filenames and reasons, then Show All to restore the full queue. Filtering does not change processing or downloads.
 
 ## Browser App
 
@@ -20,13 +22,13 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 Download the launchable Mac app:
 
-- [HISTI.V1_6.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.macOS.zip)
+- [HISTI.V1_7.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.macOS.zip)
 
-Unzip, move `HISTI.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
+Unzip, move `HISTI v1.7.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
 
 This release is ad-hoc signed, not Apple-notarized. If macOS blocks its first launch, use System Settings > Privacy & Security > Open Anyway. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
-The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.6/HISTI.V1_6.web.zip) remain available separately. Open their `index.html` in a browser.
+The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.web.zip) remain available separately. Open their `index.html` in a browser.
 
 ## What It Does
 
@@ -64,17 +66,17 @@ The 16x9 output is scaled to 1920x1080 with no crop. The 1x1 output is scaled un
 Run the versioned build script from this directory:
 
 ```bash
-bash ./build_histi_v1_6.sh
+bash ./build_histi_v1_7.sh
 ```
 
 The script creates:
 
-- `downloads/HISTI.V1_6.macOS.zip` containing `HISTI.app`
-- `downloads/HISTI.V1_6.web.zip` containing the offline web files
+- `downloads/HISTI.V1_7.macOS.zip` containing `HISTI v1.7.app`
+- `downloads/HISTI.V1_7.web.zip` containing the offline web files
 
 Requires Apple's Command Line Tools. Set `HISTI_SIGN_IDENTITY` and `HISTI_NOTARY_PROFILE` to build a Developer ID signed and notarized release when those credentials are available. With no credentials, the build uses ad-hoc signing.
 
-The app embeds the exact root web files under `HISTI.app/Contents/Resources/site`. Both downloads include `release_source.json`, matching the hosted page's marker for the same tag. Verify all shared files with:
+The app embeds the exact root web files under `HISTI v1.7.app/Contents/Resources/site`. Both downloads include `release_source.json`, matching the hosted page's marker for the same tag. Verify all shared files with:
 
 ```bash
 node scripts/verify_packages.js
