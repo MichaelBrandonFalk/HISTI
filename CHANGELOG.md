@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.8 - 2026-10-14
+
+- Added a launchable, offline Windows 10/11 (x64) desktop app and per-user installer.
+- Added a Linux amd64 desktop app and DEB installer targeting Linux Mint 21.x and 22.x.
+- Bundled the same versioned image workspace, icon, metadata handling, output choices and skipped-file view on every platform.
+- Hidden app-download controls in every desktop edition; added separate platform downloads to the hosted page.
+- Added native-platform installer, 100-image, output-download and shared-source checks in GitHub Actions.
+
 ## V1.7 - 2026-10-06
 
 - Hidden the app-download button inside the native Mac app while retaining it on the website.

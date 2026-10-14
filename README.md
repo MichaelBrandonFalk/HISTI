@@ -1,14 +1,14 @@
 # HISTI
 
-HISTI is a Mac app and browser tool for making 1920x1080 and 3000x3000 JPG copies from 3840x2160 JPG source files. Select 100 or more images in one batch to create both outputs for every source.
+HISTI is a Windows, Linux Mint, Mac and browser tool for making 1920x1080 and 3000x3000 JPG copies from 3840x2160 JPG source files. Select 100 or more images in one batch to create both outputs for every source.
 
 The app displays as **Honey, I Shrunk the Images**.
 
 ## Version
 
-Current public version: `V1.7`
+Current public version: `V1.8`
 
-The Mac bundle is named `HISTI v1.7.app`. Its header omits the download-app button; the browser version retains it. Select the Skipped counter to view only skipped filenames and reasons, then Show All to restore the full queue. Filtering does not change processing or downloads.
+The Mac bundle is named `HISTI v1.8.app`. Every desktop edition hides the app-download controls; the website shows all download options. Select the Skipped counter to view only skipped filenames and reasons, then Show All to restore the full queue. Filtering does not change processing or downloads.
 
 ## Browser App
 
@@ -20,15 +20,37 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 ## Download
 
-Download the launchable Mac app:
+### Windows
 
-- [HISTI.V1_7.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.macOS.zip)
+- [HISTI.V1_8.Windows.Setup.exe](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.Windows.Setup.exe)
 
-Unzip, move `HISTI v1.7.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
+Run the installer, choose an installation directory, and open HISTI v1.8 from the Start menu or desktop shortcut. Supports 64-bit Windows 10 and 11. The installer is unsigned, so Windows may show an unknown-publisher warning. It installs per-user and does not need Node, Python, a browser or a local web server. Uninstall through Windows Settings > Apps.
+
+### Linux Mint
+
+- [HISTI.V1_8.Linux.amd64.deb](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.Linux.amd64.deb)
+
+For 64-bit Linux Mint 21.x and 22.x (Cinnamon, MATE or Xfce). Open the DEB with Package Installer and install it, then launch HISTI v1.8 from the Graphics menu. No Node, Python, browser, AppImage, FUSE or local web server is required. Initial installation may need internet access to resolve system-library dependencies; image processing works offline afterward.
+
+Alternatively, from the folder containing the download:
+
+```bash
+sudo apt install ./HISTI.V1_8.Linux.amd64.deb
+```
+
+Uninstall with `sudo apt remove histi`. The build checks install and launch the actual DEB on Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x. This is compatibility testing, not a direct test of the Mint desktop. ARM and 32-bit editions are not included.
+
+### Mac
+
+- [HISTI.V1_8.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.macOS.zip)
+
+Unzip, move `HISTI v1.8.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
 
 This release is ad-hoc signed, not Apple-notarized. If macOS blocks its first launch, use System Settings > Privacy & Security > Open Anyway. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
-The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.7/HISTI.V1_7.web.zip) remain available separately. Open their `index.html` in a browser.
+### Offline Web
+
+The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.web.zip) remain available separately. Open their `index.html` in a browser.
 
 ## What It Does
 
@@ -66,21 +88,32 @@ The 16x9 output is scaled to 1920x1080 with no crop. The 1x1 output is scaled un
 Run the versioned build script from this directory:
 
 ```bash
-bash ./build_histi_v1_7.sh
+bash ./build_histi_v1_8.sh
 ```
 
 The script creates:
 
-- `downloads/HISTI.V1_7.macOS.zip` containing `HISTI v1.7.app`
-- `downloads/HISTI.V1_7.web.zip` containing the offline web files
+- `downloads/HISTI.V1_8.macOS.zip` containing `HISTI v1.8.app`
+- `downloads/HISTI.V1_8.web.zip` containing the offline web files
 
 Requires Apple's Command Line Tools. Set `HISTI_SIGN_IDENTITY` and `HISTI_NOTARY_PROFILE` to build a Developer ID signed and notarized release when those credentials are available. With no credentials, the build uses ad-hoc signing.
 
-The app embeds the exact root web files under `HISTI v1.7.app/Contents/Resources/site`. Both downloads include `release_source.json`, matching the hosted page's marker for the same tag. Verify all shared files with:
+Build the Windows installer on Windows or the DEB on Linux using Node 22.12 or later:
+
+```bash
+npm ci
+npm run build:windows
+# On Linux instead:
+npm run build:linux
+```
+
+Installers are written to `dist/`. Dependencies are pinned by `package-lock.json`. The Windows and Linux wrappers keep the renderer sandboxed, disable Node integration and expose only a boolean desktop marker through an isolated preload. External HTTP(S) links open in the system browser; local app navigation is restricted to the bundled workspace.
+
+The Mac app embeds the exact root web files under `HISTI v1.8.app/Contents/Resources/site`. Windows and Linux embed them under `resources/site`. Every download includes `release_source.json`, matching the hosted page's marker for the same tag. Verify shared files and core behavior with:
 
 ```bash
 node scripts/verify_packages.js
-node --test tests/core.test.js
+npm test
 ```
 
 Run the Mac integration check (opens a test window and runs 100 full-size JPGs and a PNG in both-output, landscape-only and square-only modes, validating JPG/ZIP downloads, names, dimensions, metadata and crop pixels):
@@ -88,6 +121,8 @@ Run the Mac integration check (opens a test window and runs 100 full-size JPGs a
 ```bash
 bash scripts/test_macos_batch.sh
 ```
+
+The `Desktop packages` GitHub Actions workflow builds Windows and Linux on native runners, installs each installer, verifies embedded source files, and runs a 100-JPG batch with JPG/ZIP saves, output toggles, metadata and skipped-file checks. Linux installation is also checked on the newer Mint package base. It uploads installers and screenshots only after tests pass; publication is a separate release step.
 
 ## Versioning
 

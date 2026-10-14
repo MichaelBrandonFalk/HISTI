@@ -1,0 +1,104 @@
+name: Desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/histi-windows-linux']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:windows
+      - name: Install and test Windows application
+        shell: pwsh
+        run: |
+          $install = Join-Path $env:RUNNER_TEMP 'histi-installed'
+          $installer = Join-Path $pwd 'dist/HISTI.V1_8.Windows.Setup.exe'
+          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$install" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
+          $executable = Join-Path $install 'HISTI.exe'
+          node scripts/verify_desktop.cjs $executable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/desktop_smoke.cjs $executable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: histi-windows
+          path: dist/HISTI.V1_8.Windows.Setup.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-screenshots
+          path: output/desktop/win32/*.png
+          if-no-files-found: ignore
+
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:linux
+      - name: Install DEB and test on Mint 21 package base
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ./dist/HISTI.V1_8.Linux.amd64.deb
+          node scripts/verify_desktop.cjs /opt/HISTI/histi
+          xvfb-run -a node tests/desktop_smoke.cjs /opt/HISTI/histi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: histi-linux
+          path: dist/HISTI.V1_8.Linux.amd64.deb
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-screenshots
+          path: output/desktop/linux/*.png
+          if-no-files-found: ignore
+
+  mint22-base:
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: histi-linux
+          path: dist
+      - name: Install identical DEB and test on Mint 22 package base
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ./dist/HISTI.V1_8.Linux.amd64.deb
+          node scripts/verify_desktop.cjs /opt/HISTI/histi
+          xvfb-run -a node tests/desktop_smoke.cjs /opt/HISTI/histi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mint22-base-screenshots
+          path: output/desktop/linux/*.png
+          if-no-files-found: ignore

@@ -3,8 +3,8 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
-test("exposes the V1.7 display metadata", () => {
-  assert.equal(core.APP_VERSION, "V1.7");
+test("exposes the V1.8 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.8");
   assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
 });
 

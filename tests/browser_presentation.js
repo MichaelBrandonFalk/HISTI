@@ -20,7 +20,7 @@ async (page) => {
   const pending = page.waitForEvent("download");
   await page.locator("#download-all-button").click();
   const download = await pending;
-  if (download.suggestedFilename() !== "HISTI_V1_7_outputs.zip") throw new Error("Wrong download version");
+  if (download.suggestedFilename() !== "HISTI_V1_8_outputs.zip") throw new Error("Wrong download version");
   await download.saveAs("/tmp/histi-v17-filtered.zip");
   if (await download.failure()) throw new Error("Filtered-view download failed");
   return result + "; saved both ready outputs while Skipped view was active";

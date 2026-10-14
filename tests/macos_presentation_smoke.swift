@@ -13,7 +13,7 @@ class PresentationSmokeDelegate: HISTIAppDelegate {
 
     private func poll() {
         if Date().timeIntervalSince(started) > 60 { fail("Native presentation test timed out") }
-        webView.evaluateJavaScript("({loaded: document.readyState === 'complete' && window.HISTI_CORE?.APP_VERSION === 'V1.7', result: window.HISTI_TEST_RESULT})") { value, error in
+        webView.evaluateJavaScript("({loaded: document.readyState === 'complete' && window.HISTI_CORE?.APP_VERSION === 'V1.8', result: window.HISTI_TEST_RESULT})") { value, error in
             if let error = error { self.fail(error.localizedDescription) }
             guard let status = value as? [String: Any] else { return }
             if let result = status["result"] as? [String: Any] {

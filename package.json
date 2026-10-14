@@ -1,0 +1,60 @@
+{
+  "name": "histi",
+  "version": "1.8.0",
+  "private": true,
+  "description": "Honey, I Shrunk the Images - bulk JPG resizing and square crops",
+  "author": { "name": "MichaelBrandonFalk", "email": "MichaelBrandonFalk@users.noreply.github.com" },
+  "license": "UNLICENSED",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/core.test.js tests/desktop.test.cjs",
+    "build:windows": "electron-builder --win nsis --x64 --publish never",
+    "build:linux": "electron-builder --linux deb --x64 --publish never",
+    "test:desktop": "node tests/desktop_smoke.cjs",
+    "verify:desktop": "node scripts/verify_desktop.cjs"
+  },
+  "devDependencies": {
+    "@electron/asar": "4.0.1",
+    "electron": "44.7.2",
+    "electron-builder": "26.15.3",
+    "playwright": "1.64.1"
+  },
+  "build": {
+    "appId": "com.michaelbrandonfalk.histi",
+    "productName": "HISTI",
+    "directories": { "output": "dist", "buildResources": "assets" },
+    "files": ["desktop/*.cjs", "package.json"],
+    "extraResources": [{
+      "from": ".",
+      "to": "site",
+      "filter": ["index.html", "styles.css", "app.js", "histi_core.js", "zip_store.js", "site.webmanifest", "release_source.json", "README.md", "CHANGELOG.md", "VERSION", "assets/histi_icon.png"]
+    }],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/histi_icon.png",
+      "artifactName": "HISTI.V1_8.Windows.Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HISTI v1.8",
+      "uninstallDisplayName": "HISTI v1.8",
+      "runAfterFinish": false
+    },
+    "linux": {
+      "target": "deb",
+      "icon": "assets/histi_icon.png",
+      "category": "Graphics",
+      "executableName": "histi",
+      "artifactName": "HISTI.V1_8.Linux.amd64.deb",
+      "desktop": { "entry": { "Name": "HISTI v1.8", "Comment": "Honey, I Shrunk the Images" } }
+    },
+    "deb": {
+      "depends": ["libgtk-3-0 | libgtk-3-0t64", "libnss3", "libxss1", "libxtst6", "libatspi2.0-0 | libatspi2.0-0t64", "libuuid1", "libasound2 | libasound2t64", "libgbm1", "libdrm2", "libnotify4", "libsecret-1-0"]
+    }
+  }
+}

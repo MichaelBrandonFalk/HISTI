@@ -469,7 +469,7 @@
         refs.progress.value = completed;
         setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
       });
-      downloadBlob(blob, "HISTI_V1_7_outputs.zip");
+      downloadBlob(blob, "HISTI_V1_8_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -588,7 +588,9 @@
 
   function bindEvents() {
     refs.version.textContent = core.APP_VERSION;
-    if (window.HISTI_NATIVE_APP === true) $(".app-download").hidden = true;
+    if (window.HISTI_NATIVE_APP === true) {
+      document.querySelectorAll(".app-download, .download-links").forEach((element) => { element.hidden = true; });
+    }
     refs.outputOptions.forEach((input) => {
       input.checked = state.enabledTargets.has(input.dataset.outputTarget);
       input.addEventListener("change", changeOutputOptions);

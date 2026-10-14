@@ -25,7 +25,7 @@ window.runHistiPresentationChecks = async function (nativeApp) {
     return new File([blob], name, { type: "image/jpeg" });
   };
 
-  check(window.HISTI_CORE.APP_VERSION === "V1.7", "Wrong application version");
+  check(window.HISTI_CORE.APP_VERSION === "V1.8", "Wrong application version");
   check($(".app-download").hidden === nativeApp, "Wrong download-app visibility");
   check((getComputedStyle($(".app-download")).display === "none") === nativeApp, "Download-app CSS visibility incorrect");
   check($("#output-landscape").checked && $("#output-square").checked, "Defaults changed");

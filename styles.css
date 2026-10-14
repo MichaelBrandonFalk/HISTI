@@ -121,6 +121,16 @@ h1 {
   display: none;
 }
 
+.download-links {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.download-links[hidden] {
+  display: none;
+}
+
 .app-download:hover {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
