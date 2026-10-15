@@ -1,0 +1,89 @@
+name: Publish tested desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tested source tag (defaults to VERSION)'
+        required: false
+        type: string
+  push:
+    branches: ['codex/histi-publish-v1.8']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Find successful build for exact source tag
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${REQUESTED_TAG:-v$(tr -d '\r\n' < VERSION)}"
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+$ ]]
+          SHA="$(git rev-list -n 1 "$TAG")"
+          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/desktop.yml/runs?head_sha=$SHA&status=success&per_page=100" --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\") | .id" | head -n 1)"
+          test -n "$RUN_ID"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Publishing tested source $TAG ($SHA), build $RUN_ID"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify tracked Mac and web packages
+        run: node scripts/verify_packages.js
+      - uses: actions/download-artifact@v4
+        with:
+          name: histi-windows
+          path: dist/release
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: histi-linux
+          path: dist/release
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Assemble release and checksums
+        run: |
+          set -euo pipefail
+          VERSION_TOKEN="$(tr -d '\r\n' < VERSION | tr '.' '_')"
+          cp "downloads/HISTI.V${VERSION_TOKEN}.macOS.zip" "downloads/HISTI.V${VERSION_TOKEN}.web.zip" dist/release/
+          test -s "dist/release/HISTI.V${VERSION_TOKEN}.Windows.Setup.exe"
+          test -s "dist/release/HISTI.V${VERSION_TOKEN}.Linux.amd64.deb"
+          cd dist/release
+          sha256sum HISTI* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Publish all four downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_TAG: ${{ steps.source.outputs.tag }}
+          RELEASE_NOTES: |
+            Windows, Linux Mint, Mac and offline web downloads are included below.
+
+            - Windows 10/11 (64-bit): run the Setup.exe installer, then open HISTI from the Start menu. The installer is unsigned.
+            - Linux Mint 21.x/22.x (64-bit): open the .deb in Package Installer, or install it with sudo apt install ./HISTI.V1_8.Linux.amd64.deb. Launch HISTI from the Graphics menu. No AppImage/FUSE setup is needed.
+            - Mac (Apple Silicon/Intel, macOS 12+): unzip and open HISTI v1.8.app. Ad-hoc signed, not Apple-notarized.
+            - Offline web: unzip and open index.html in a browser.
+
+            All editions retain both output sizes by default, metadata handling, output toggles and skipped filenames/reasons. Desktop editions hide the app-download controls.
+
+            Windows and both Linux compatibility checks installed the actual installers and processed 100 JPGs into 200 outputs. Filenames, dimensions, ZIP CRCs, metadata, individual/ZIP saves and embedded source files were verified. Linux testing used Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x, rather than the Mint desktop itself.
+
+            Every package uses the same tagged web source. SHA256SUMS.txt contains hashes of all four downloads.
+
+            Website and installation documentation: https://michaelbrandonfalk.github.io/HISTI/
+        run: gh release create "$SOURCE_TAG" dist/release/* --repo "$GITHUB_REPOSITORY" --title "HISTI V${SOURCE_TAG#v}" --notes "$RELEASE_NOTES" --verify-tag --latest
