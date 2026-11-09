@@ -16,6 +16,10 @@ async function main() {
   const application = await _electron.launch({ executablePath: executable || require("electron"), args: executable ? [] : [root], timeout: 60000 });
   try {
     const page = await application.firstWindow({ timeout: 60000 });
+    await application.evaluate(({ dialog }) => {
+      globalThis.upscaleErrors = [];
+      dialog.showErrorBox = (title, message) => globalThis.upscaleErrors.push(`${title}: ${message}`);
+    });
     await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.9");
     await page.locator("#direction-upscale").check();
     const jpeg = Buffer.from(await page.evaluate(() => {
@@ -54,7 +58,8 @@ async function main() {
     }, output);
     const waitForSaves = async (count) => {
       for (let i = 0; ; i += 1) {
-        const saved = await application.evaluate(() => globalThis.upscaleDownloads);
+        const { saved, errors } = await application.evaluate(() => ({ saved: globalThis.upscaleDownloads, errors: globalThis.upscaleErrors }));
+        assert.equal(errors.length, 0, errors.join("; "));
         if (saved.length >= count) { assert.ok(saved.every((file) => file.state === "completed")); return; }
         assert.ok(i < 1200, "Timed out saving upscale outputs");
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -63,16 +68,19 @@ async function main() {
     await page.locator("#download-all-button").click();
     await waitForSaves(1);
     execFileSync(process.execPath, [path.join(__dirname, "verify_batch_zip.js"), path.join(output, "HISTI_V1_9_upscaled_outputs.zip"), fixtures, "upscale"], { stdio: "inherit" });
+    console.log("Verified upscale ZIP; saving an individual JPG...");
     await page.locator("#results-body button").first().click();
     await waitForSaves(2);
     const fileName = core.buildOutputFileName(path.basename(paths[0]), "upscale");
     assert.deepEqual(metadataSegments(fs.readFileSync(path.join(output, fileName))), core.extractJpegMetadataSegments(source, core.UPSCALE_TARGET).map((segment) => Uint8Array.from(segment)));
+    console.log("Verified individual upscale JPG; capturing the workspace...");
     await page.screenshot({ path: path.join(output, "histi-upscale.png") });
     await page.locator("#clear-button").click();
-    await page.locator("#file-input").setInputFiles([paths[0]]);
+    await page.locator("#file-input").setInputFiles([paths[1]]);
     await page.locator("#process-button").click();
     await page.waitForFunction(() => document.querySelector("#ready-count").textContent === "1"
       && document.querySelector("#process-button").textContent === "Process");
+    console.log("Saving a one-output batch directly as JPG...");
     await page.locator("#download-all-button").click();
     await waitForSaves(3);
     assert.ok((await application.evaluate(() => globalThis.upscaleDownloads)).at(-1).name.endsWith(".jpg"), "One upscale output must save as JPG, not ZIP");
