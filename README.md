@@ -4,11 +4,21 @@ HISTI is a Windows, Linux Mint, Mac and browser tool for making 1920x1080 and 30
 
 The app displays as **Honey, I Shrunk the Images**.
 
+## Honey, I blew up the images
+
+Select **Upscale** to turn exactly `1920x1080` JPGs into `3840x2160` JPGs. The offline, bundled pica 10.0.3 resampler explicitly uses **Lanczos3**, with browser-native resizing and extra sharpening disabled. Upscale does not crop, change aspect ratio or generate AI detail. JPGs are re-encoded at the existing quality setting.
+
+Shrink remains the default and retains both original output options. Direction is locked while files are queued, pending or processing; Clear unlocks it. Upscale always has one 16x9 output, independent of the Shrink checkbox choices.
+
+`example_16x9_1920x1080.jpg` becomes `example_16x9_3840x2160.jpg`. Other filename text and extension case are preserved. A name without the dimension token receives `_16x9_3840x2160` (without duplicating an existing 16x9 suffix). Upscale ZIPs use `HISTI_V1_9_upscaled_outputs.zip`; a single result saves directly as JPG. JPEG metadata is copied with supported EXIF/XMP dimension fields updated.
+
+The resampler and MIT license ship in `vendor/`, so both directions work without network access. `npm test` checks the vendored bytes, filter configuration, naming, EXIF/XMP updates and an independent Lanczos reference. Native and browser checks also compare full-resolution output pixels at edges and tile boundaries. `bash scripts/test_macos_upscale.sh` tests 100 upscales in the actual Mac WebKit wrapper.
+
 ## Version
 
-Current public version: `V1.8`
+Current public version: `V1.9`
 
-The Mac bundle is named `HISTI v1.8.app`. Every desktop edition hides the app-download controls; the website shows all download options. Select the Skipped counter to view only skipped filenames and reasons, then Show All to restore the full queue. Filtering does not change processing or downloads.
+The Mac bundle is named `HISTI v1.9.app`. Every desktop edition hides the app-download controls; the website shows all download options. Select the Skipped counter to view only skipped filenames and reasons, then Show All to restore the full queue. Filtering does not change processing or downloads.
 
 ## Browser App
 
@@ -22,35 +32,35 @@ All image processing happens in the browser. Files are not uploaded to a server.
 
 ### Windows
 
-- [HISTI.V1_8.Windows.Setup.exe](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.Windows.Setup.exe)
+- [HISTI.V1_9.Windows.Setup.exe](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.Windows.Setup.exe)
 
-Run the installer, choose an installation directory, and open HISTI v1.8 from the Start menu or desktop shortcut. Supports 64-bit Windows 10 and 11. The installer is unsigned, so Windows may show an unknown-publisher warning. It installs per-user and does not need Node, Python, a browser or a local web server. Uninstall through Windows Settings > Apps.
+Run the installer, choose an installation directory, and open HISTI v1.9 from the Start menu or desktop shortcut. Supports 64-bit Windows 10 and 11. The installer is unsigned, so Windows may show an unknown-publisher warning. It installs per-user and does not need Node, Python, a browser or a local web server. Uninstall through Windows Settings > Apps.
 
 ### Linux Mint
 
-- [HISTI.V1_8.Linux.amd64.deb](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.Linux.amd64.deb)
+- [HISTI.V1_9.Linux.amd64.deb](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.Linux.amd64.deb)
 
-For 64-bit Linux Mint 21.x and 22.x (Cinnamon, MATE or Xfce). Open the DEB with Package Installer and install it, then launch HISTI v1.8 from the Graphics menu. No Node, Python, browser, AppImage, FUSE or local web server is required. Initial installation may need internet access to resolve system-library dependencies; image processing works offline afterward.
+For 64-bit Linux Mint 21.x and 22.x (Cinnamon, MATE or Xfce). Open the DEB with Package Installer and install it, then launch HISTI v1.9 from the Graphics menu. No Node, Python, browser, AppImage, FUSE or local web server is required. Initial installation may need internet access to resolve system-library dependencies; image processing works offline afterward.
 
 Alternatively, from the folder containing the download:
 
 ```bash
-sudo apt install ./HISTI.V1_8.Linux.amd64.deb
+sudo apt install ./HISTI.V1_9.Linux.amd64.deb
 ```
 
 Uninstall with `sudo apt remove histi`. The build checks install and launch the actual DEB on Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x. This is compatibility testing, not a direct test of the Mint desktop. ARM and 32-bit editions are not included.
 
 ### Mac
 
-- [HISTI.V1_8.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.macOS.zip)
+- [HISTI.V1_9.macOS.zip](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.macOS.zip)
 
-Unzip, move `HISTI v1.8.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
+Unzip, move `HISTI v1.9.app` into Applications, and open it. The universal app supports Apple Silicon and Intel Macs running macOS 12 or later. It works offline without Node, Python, or a local web server. File selection and output saving use native Mac dialogs.
 
 This release is ad-hoc signed, not Apple-notarized. If macOS blocks its first launch, use System Settings > Privacy & Security > Open Anyway. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
 ### Offline Web
 
-The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.8/HISTI.V1_8.web.zip) remain available separately. Open their `index.html` in a browser.
+The [offline web files](https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.web.zip) remain available separately. Open their `index.html` in a browser.
 
 ## What It Does
 
@@ -88,13 +98,13 @@ The 16x9 output is scaled to 1920x1080 with no crop. The 1x1 output is scaled un
 Run the versioned build script from this directory:
 
 ```bash
-bash ./build_histi_v1_8.sh
+bash ./build_histi_v1_9.sh
 ```
 
 The script creates:
 
-- `downloads/HISTI.V1_8.macOS.zip` containing `HISTI v1.8.app`
-- `downloads/HISTI.V1_8.web.zip` containing the offline web files
+- `downloads/HISTI.V1_9.macOS.zip` containing `HISTI v1.9.app`
+- `downloads/HISTI.V1_9.web.zip` containing the offline web files
 
 Requires Apple's Command Line Tools. Set `HISTI_SIGN_IDENTITY` and `HISTI_NOTARY_PROFILE` to build a Developer ID signed and notarized release when those credentials are available. With no credentials, the build uses ad-hoc signing.
 
@@ -109,7 +119,7 @@ npm run build:linux
 
 Installers are written to `dist/`. Dependencies are pinned by `package-lock.json`. The Windows and Linux wrappers keep the renderer sandboxed, disable Node integration and expose only a boolean desktop marker through an isolated preload. External HTTP(S) links open in the system browser; local app navigation is restricted to the bundled workspace.
 
-The Mac app embeds the exact root web files under `HISTI v1.8.app/Contents/Resources/site`. Windows and Linux embed them under `resources/site`. Every download includes `release_source.json`, matching the hosted page's marker for the same tag. Verify shared files and core behavior with:
+The Mac app embeds the exact root web files under `HISTI v1.9.app/Contents/Resources/site`. Windows and Linux embed them under `resources/site`. Every download includes `release_source.json`, matching the hosted page's marker for the same tag. Verify shared files and core behavior with:
 
 ```bash
 node scripts/verify_packages.js

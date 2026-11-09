@@ -8,7 +8,7 @@ on:
         required: false
         type: string
   push:
-    branches: ['codex/histi-publish-v1.8']
+    branches: ['codex/histi-lanczos-publish-v1.9']
 
 permissions:
   contents: write
@@ -32,7 +32,7 @@ jobs:
           TAG="${REQUESTED_TAG:-v$(tr -d '\r\n' < VERSION)}"
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+$ ]]
           SHA="$(git rev-list -n 1 "$TAG")"
-          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/desktop.yml/runs?head_sha=$SHA&status=success&per_page=100" --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\") | .id" | head -n 1)"
+          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/desktop.yml/runs?head_sha=$SHA&status=success&per_page=100" --jq "[.workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\")][0].id // empty")"
           test -n "$RUN_ID"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
@@ -75,13 +75,15 @@ jobs:
             Windows, Linux Mint, Mac and offline web downloads are included below.
 
             - Windows 10/11 (64-bit): run the Setup.exe installer, then open HISTI from the Start menu. The installer is unsigned.
-            - Linux Mint 21.x/22.x (64-bit): open the .deb in Package Installer, or install it with sudo apt install ./HISTI.V1_8.Linux.amd64.deb. Launch HISTI from the Graphics menu. No AppImage/FUSE setup is needed.
-            - Mac (Apple Silicon/Intel, macOS 12+): unzip and open HISTI v1.8.app. Ad-hoc signed, not Apple-notarized.
+            - Linux Mint 21.x/22.x (64-bit): open the .deb in Package Installer, or install it with sudo apt install ./HISTI.V1_9.Linux.amd64.deb. Launch HISTI from the Graphics menu. No AppImage/FUSE setup is needed.
+            - Mac (Apple Silicon/Intel, macOS 12+): unzip and open HISTI v1.9.app. Ad-hoc signed, not Apple-notarized.
             - Offline web: unzip and open index.html in a browser.
 
             All editions retain both output sizes by default, metadata handling, output toggles and skipped filenames/reasons. Desktop editions hide the app-download controls.
 
-            Windows and both Linux compatibility checks installed the actual installers and processed 100 JPGs into 200 outputs. Filenames, dimensions, ZIP CRCs, metadata, individual/ZIP saves and embedded source files were verified. Linux testing used Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x, rather than the Mint desktop itself.
+            New: Honey, I blew up the images. Select Upscale to convert exactly 1920x1080 JPGs to 3840x2160 using offline Lanczos3, with no crop or added sharpening. Shrink remains the default. Clear the queue before switching directions. Upscale filenames replace 1920x1080 with 3840x2160, and JPEG metadata dimensions are updated.
+
+            Windows and both Linux compatibility checks installed the actual installers and tested 100-input Shrink and Upscale batches. Filenames, dimensions, ZIP CRCs, raw EXIF/XMP metadata, individual/ZIP saves and embedded source files were verified, along with independent Lanczos3 pixel comparisons. Linux testing used Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x, rather than the Mint desktop itself.
 
             Every package uses the same tagged web source. SHA256SUMS.txt contains hashes of all four downloads.
 

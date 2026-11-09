@@ -12,8 +12,8 @@ class PresentationSmokeDelegate: HISTIAppDelegate {
     }
 
     private func poll() {
-        if Date().timeIntervalSince(started) > 60 { fail("Native presentation test timed out") }
-        webView.evaluateJavaScript("({loaded: document.readyState === 'complete' && window.HISTI_CORE?.APP_VERSION === 'V1.8', result: window.HISTI_TEST_RESULT})") { value, error in
+        if Date().timeIntervalSince(started) > 180 { fail("Native presentation test timed out") }
+        webView.evaluateJavaScript("({loaded: document.readyState === 'complete' && window.HISTI_CORE?.APP_VERSION === 'V1.9', result: window.HISTI_TEST_RESULT})") { value, error in
             if let error = error { self.fail(error.localizedDescription) }
             guard let status = value as? [String: Any] else { return }
             if let result = status["result"] as? [String: Any] {
@@ -25,7 +25,9 @@ class PresentationSmokeDelegate: HISTIAppDelegate {
                 self.running = true
                 do {
                     let checks = try String(contentsOfFile: CommandLine.arguments[1], encoding: .utf8)
-                    let script = checks + "\nrunHistiPresentationChecks(true).then(message => { window.HISTI_TEST_RESULT = {passed: true, message}; }).catch(error => { window.HISTI_TEST_RESULT = {passed: false, message: error.message}; }); null;"
+                    let upscalePath = URL(fileURLWithPath: CommandLine.arguments[1]).deletingLastPathComponent().appendingPathComponent("upscale_checks.js")
+                    let upscaleChecks = try String(contentsOf: upscalePath, encoding: .utf8)
+                    let script = checks + "\n" + upscaleChecks + "\nrunHistiPresentationChecks(true).then(first => runHistiUpscaleChecks().then(second => first + '; ' + second)).then(message => { window.HISTI_TEST_RESULT = {passed: true, message}; }).catch(error => { window.HISTI_TEST_RESULT = {passed: false, message: error.message}; }); null;"
                     self.webView.evaluateJavaScript(script) { _, error in
                         if let error = error { self.fail(error.localizedDescription) }
                     }

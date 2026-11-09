@@ -10,6 +10,7 @@
     items: [],
     pendingItems: [],
     processing: false,
+    direction: "shrink",
     showSkipped: false,
     enabledTargets: new Set(core.OUTPUT_TARGETS.map((target) => target.id)),
   };
@@ -24,6 +25,12 @@
 
   function initRefs() {
     refs.version = $("[data-version]");
+    refs.displayName = $("#display-name");
+    refs.directionInputs = [...document.querySelectorAll('[name="direction"]')];
+    refs.shrinkOutputs = $("#shrink-outputs");
+    refs.upscaleOutput = $("#upscale-output");
+    refs.shrinkRules = $("#shrink-rules");
+    refs.upscaleRules = $("#upscale-rules");
     refs.dropzone = $("#dropzone");
     refs.fileInput = $("#file-input");
     refs.pickButton = $("#pick-button");
@@ -72,6 +79,10 @@
     refs.queueAdd.disabled = isBusy;
     refs.queueReplace.disabled = isBusy;
     refs.outputOptions.forEach((input) => { input.disabled = isBusy; });
+    refs.directionInputs.forEach((input) => {
+      input.disabled = isBusy || state.items.length > 0 || state.pendingItems.length > 0;
+      input.checked = input.value === state.direction;
+    });
     refs.tableBody.querySelectorAll("button").forEach((button) => { button.disabled = isBusy; });
   }
 
@@ -104,7 +115,7 @@
         return [item];
       }
 
-      return core.OUTPUT_TARGETS.map((target) => {
+      return core.getOutputTargets(state.direction).map((target) => {
         let outputName = "";
         try {
           outputName = core.buildOutputFileName(file.name, target.id);
@@ -186,7 +197,7 @@
   }
 
   function selectionSummary(items, verb = "Selected") {
-    if (state.enabledTargets.size === 0) {
+    if (!hasEnabledTargets()) {
       const sources = new Set(items.map((item) => item.sourceId)).size;
       return `${verb} ${sources} images; select at least one output size.`;
     }
@@ -201,15 +212,40 @@
   }
 
   function statusKindForItems(items) {
-    return state.enabledTargets.size === 0 || items.some((item) => isEnabledItem(item) && item.error) ? "warn" : "ready";
+    return !hasEnabledTargets() || items.some((item) => isEnabledItem(item) && item.error) ? "warn" : "ready";
   }
 
   function isEnabledItem(item) {
-    return !item.targetId || state.enabledTargets.has(item.targetId);
+    return !item.targetId || item.targetId === "upscale" || state.enabledTargets.has(item.targetId);
+  }
+
+  function hasEnabledTargets() {
+    return state.direction === "upscale" || state.enabledTargets.size > 0;
+  }
+
+  function renderDirection() {
+    const upscale = state.direction === "upscale";
+    refs.displayName.textContent = upscale ? core.UPSCALE_DISPLAY_NAME : core.DISPLAY_NAME;
+    document.title = `${refs.displayName.textContent} | HISTI ${core.APP_VERSION}`;
+    refs.shrinkOutputs.hidden = upscale;
+    refs.upscaleOutput.hidden = !upscale;
+    refs.shrinkRules.hidden = upscale;
+    refs.upscaleRules.hidden = !upscale;
+  }
+
+  function changeDirection(event) {
+    if (state.processing || state.items.length > 0 || state.pendingItems.length > 0) {
+      renderControls();
+      return;
+    }
+    core.getOutputTargets(event.target.value);
+    state.direction = event.target.value;
+    renderDirection();
+    clearAll();
   }
 
   function changeOutputOptions() {
-    if (state.processing) return;
+    if (state.processing || state.direction !== "shrink") return;
     state.enabledTargets = new Set(refs.outputOptions.filter((input) => input.checked)
       .map((input) => input.dataset.outputTarget));
     refs.progress.hidden = true;
@@ -240,7 +276,7 @@
     refs.progress.hidden = true;
     refs.progress.value = 0;
     render();
-    setStatus(state.enabledTargets.size > 0 ? "Select one or more JPG files." : "Select at least one output size.", state.enabledTargets.size > 0 ? "" : "warn");
+    setStatus(hasEnabledTargets() ? "Select one or more JPG files." : "Select at least one output size.", hasEnabledTargets() ? "" : "warn");
   }
 
   function outputUrl(output) {
@@ -317,7 +353,8 @@
       if (!context) throw new Error("Could not allocate image canvas.");
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
-      drawTargetImage(context, image, width, height, target);
+      if (target.mode === "lanczos3") await window.HISTI_RESAMPLE.upscale(image, canvas);
+      else drawTargetImage(context, image, width, height, target);
       rawBlob = await canvasToJpeg(canvas);
     } finally {
       // Release the large pixel buffer before allocating the next output canvas.
@@ -383,7 +420,7 @@
         image = await loadImage(file);
         const width = image.width || image.naturalWidth;
         const height = image.height || image.naturalHeight;
-        core.validateSourceDimensions(width, height);
+        core.validateSourceDimensions(width, height, state.direction);
 
         for (const item of items) {
           try {
@@ -469,7 +506,7 @@
         refs.progress.value = completed;
         setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
       });
-      downloadBlob(blob, "HISTI_V1_8_outputs.zip");
+      downloadBlob(blob, state.direction === "upscale" ? "HISTI_V1_9_upscaled_outputs.zip" : "HISTI_V1_9_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");
@@ -588,6 +625,8 @@
 
   function bindEvents() {
     refs.version.textContent = core.APP_VERSION;
+    renderDirection();
+    refs.directionInputs.forEach((input) => input.addEventListener("change", changeDirection));
     if (window.HISTI_NATIVE_APP === true) {
       document.querySelectorAll(".app-download, .download-links").forEach((element) => { element.hidden = true; });
     }

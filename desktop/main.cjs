@@ -26,7 +26,6 @@ async function createWindow() {
     }
   });
   const contents = window.webContents;
-  contents.on("page-title-updated", (event) => event.preventDefault());
   contents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   contents.session.setPermissionCheckHandler(() => false);
   contents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: "deny" }; });

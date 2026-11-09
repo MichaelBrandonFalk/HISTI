@@ -157,6 +157,66 @@ h1 {
   border: 0;
 }
 
+.direction-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 18px;
+  padding: 0;
+  border: 0;
+}
+
+.direction-options legend,
+.fixed-output > span {
+  padding: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.direction-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.direction-options label:has(input:checked) {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.direction-options label:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.direction-options input {
+  accent-color: var(--accent);
+}
+
+.fixed-output {
+  margin: 12px 18px;
+  min-height: 56px;
+}
+
+.fixed-output > span {
+  display: block;
+}
+
+.output-options[hidden],
+.fixed-output[hidden],
+.rule-strip[hidden] {
+  display: none;
+}
+
 .output-options legend {
   padding: 0 0 8px;
   color: var(--muted);

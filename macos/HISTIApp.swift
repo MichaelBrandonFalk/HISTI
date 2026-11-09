@@ -4,6 +4,7 @@ import WebKit
 class HISTIAppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     var window: NSWindow!
     var webView: WKWebView!
+    private var titleObservation: NSKeyValueObservation?
     private var destinations: [ObjectIdentifier: (temporary: URL, final: URL)] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -23,6 +24,9 @@ class HISTIAppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, W
         window.title = "Honey, I Shrunk the Images"
         window.minSize = NSSize(width: 780, height: 600)
         window.contentView = webView
+        titleObservation = webView.observe(\.title, options: .new) { [weak self] view, _ in
+            if let title = view.title, !title.isEmpty { self?.window.title = title }
+        }
         window.center()
         installMenu()
         window.makeKeyAndOrderFront(nil)

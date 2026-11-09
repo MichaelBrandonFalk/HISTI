@@ -3,10 +3,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const core = require("../histi_core.js");
 const { crc32 } = require("../zip_store.js");
+const { metadataSegments } = require("./jpeg_checks.cjs");
 
 const [archive, fixtures, mode = "both"] = process.argv.slice(2);
-assert.ok(["both", "16x9", "1x1"].includes(mode));
-const targets = core.OUTPUT_TARGETS.filter((target) => mode === "both" || target.id === mode);
+assert.ok(["both", "16x9", "1x1", "upscale"].includes(mode));
+const targets = mode === "upscale" ? [core.UPSCALE_TARGET] : core.OUTPUT_TARGETS.filter((target) => mode === "both" || target.id === mode);
 const expected = new Map();
 for (const name of fs.readdirSync(fixtures).filter((name) => /\.jpg$/.test(name))) {
   for (const target of targets) expected.set(core.buildOutputFileName(name, target.id), { name, target });
@@ -51,7 +52,7 @@ try {
     assert.equal(crc32(bytes), header.readUInt32LE(14), `${name}: CRC mismatch`);
     assert.deepEqual(dimensions(bytes), [input.target.width, input.target.height], `${name}: wrong dimensions`);
     const source = fs.readFileSync(path.join(fixtures, input.name));
-    assert.deepEqual(core.extractJpegMetadataSegments(bytes, input.target), core.extractJpegMetadataSegments(source, input.target), `${name}: metadata changed`);
+    assert.deepEqual(metadataSegments(bytes), core.extractJpegMetadataSegments(source, input.target).map((segment) => Uint8Array.from(segment)), `${name}: actual metadata differs from source with only dimension updates`);
     offset += 30 + nameLength + extraLength + length;
     count += 1;
     payloadSize += length;

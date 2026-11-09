@@ -4,11 +4,10 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
-const files = ["index.html", "styles.css", "app.js", "histi_core.js", "zip_store.js", "site.webmanifest",
-  "release_source.json", "README.md", "CHANGELOG.md", "VERSION", "assets/histi_icon.png"];
+const files = require("../package.json").build.extraResources[0].filter;
 const packages = [
-  ["HISTI.V1_8.macOS.zip", "HISTI v1.8.app/Contents/Resources/site"],
-  ["HISTI.V1_8.web.zip", "HISTI V1_8 Web"],
+  ["HISTI.V1_9.macOS.zip", "HISTI v1.9.app/Contents/Resources/site"],
+  ["HISTI.V1_9.web.zip", "HISTI V1_9 Web"],
 ];
 
 for (const [name, prefix] of packages) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.9 - 2026-11-09
+
+- Added the "Honey, I blew up the images" Upscale direction for exactly 1920x1080 JPGs to 3840x2160.
+- Bundled pica 10.0.3 and its MIT license for explicit, offline Lanczos3 resampling without cropping, browser-native resize fallback or added sharpening.
+- Preserved default Shrink behavior, existing output choices, skipped-file view, filenames and JPEG metadata handling.
+- Locked direction while a queue exists and restored it on Clear; opposite-size sources explain the required direction.
+- Added full-size independent Lanczos reference checks, raw EXIF/XMP checks and 100-image upscale checks for native packages.
+- Updated all four packages and versioned web assets; patched the existing Electron runtime within its current major version.
+
 ## V1.8 - 2026-10-14
 
 - Added a launchable, offline Windows 10/11 (x64) desktop app and per-user installer.

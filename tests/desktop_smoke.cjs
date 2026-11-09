@@ -4,6 +4,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { _electron } = require("playwright");
 const core = require("../histi_core.js");
+const { metadataSegments } = require("./jpeg_checks.cjs");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "output", "desktop", process.platform);
 const fixtures = path.join(output, "fixtures");
@@ -19,7 +20,7 @@ async function main() {
   });
   try {
     const page = await application.firstWindow({ timeout: 60000 });
-    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.8");
+    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.9");
     const security = await application.evaluate(({ BrowserWindow }) => {
       const options = BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences();
       return { sandbox: options.sandbox, contextIsolation: options.contextIsolation, nodeIntegration: options.nodeIntegration };
@@ -30,6 +31,8 @@ async function main() {
     assert.equal(await page.locator(".app-download:visible").count(), 0);
     await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, "presentation_checks.js"), "utf8") });
     console.log(await page.evaluate(() => window.runHistiPresentationChecks(true)));
+    await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, "upscale_checks.js"), "utf8") });
+    console.log(await page.evaluate(() => window.runHistiUpscaleChecks()));
 
     const encoded = await page.evaluate(async () => {
       const canvas = document.createElement("canvas");
@@ -81,7 +84,7 @@ async function main() {
       });
     }, output);
     await page.locator("#download-all-button").click();
-    const zipPath = path.join(output, "HISTI_V1_8_outputs.zip");
+    const zipPath = path.join(output, "HISTI_V1_9_outputs.zip");
     for (let i = 0; ; i += 1) {
       const saved = await application.evaluate(() => globalThis.histiTestDownloads);
       if (saved.some((file) => file.name.endsWith(".zip") && file.state === "completed")) break;
@@ -102,7 +105,7 @@ async function main() {
     }
     const single = path.join(output, core.buildOutputFileName(path.basename(paths[0]), "16x9"));
     assert.ok(fs.statSync(single).size > 1000);
-    assert.deepEqual(core.extractJpegMetadataSegments(fs.readFileSync(single), core.getOutputTarget("16x9")), core.extractJpegMetadataSegments(source, core.getOutputTarget("16x9")));
+    assert.deepEqual(metadataSegments(fs.readFileSync(single)), core.extractJpegMetadataSegments(source, core.getOutputTarget("16x9")).map((segment) => Uint8Array.from(segment)));
     await page.locator("#output-square").uncheck();
     assert.equal(await page.locator("#ready-count").textContent(), "100");
     await page.locator("#output-landscape").uncheck();

@@ -9,7 +9,8 @@
 
   const APP_NAME = "HISTI";
   const DISPLAY_NAME = "Honey, I Shrunk the Images";
-  const APP_VERSION = "V1.8";
+  const UPSCALE_DISPLAY_NAME = "Honey, I blew up the images";
+  const APP_VERSION = "V1.9";
   const SOURCE_WIDTH = 3840;
   const SOURCE_HEIGHT = 2160;
   const TARGET_WIDTH = 1920;
@@ -45,6 +46,11 @@
       mode: "cover",
     },
   ];
+  const UPSCALE_TARGET = {
+    id: "upscale", label: "16x9 3840x2160",
+    width: SOURCE_WIDTH, height: SOURCE_HEIGHT,
+    ratioToken: SOURCE_RATIO_TOKEN, dimensionToken: SOURCE_TOKEN, mode: "lanczos3",
+  };
   const MARKER_SOS = 0xda;
   const MARKER_EOI = 0xd9;
   const MARKER_COM = 0xfe;
@@ -70,6 +76,7 @@
   }
 
   function getOutputTarget(targetId) {
+    if (targetId === UPSCALE_TARGET.id) return UPSCALE_TARGET;
     const target = OUTPUT_TARGETS.find((candidate) => candidate.id === targetId);
     if (!target) {
       throw new Error(`Unknown output target: ${targetId}.`);
@@ -77,16 +84,29 @@
     return target;
   }
 
+  function getOutputTargets(direction = "shrink") {
+    if (direction === "shrink") return OUTPUT_TARGETS;
+    if (direction === "upscale") return [UPSCALE_TARGET];
+    throw new Error(`Unknown direction: ${direction}.`);
+  }
+
   function buildOutputFileName(fileName, targetId = "16x9") {
-    const value = String(fileName || "").trim();
+    const value = String(fileName || "");
     const target = getOutputTarget(targetId);
 
-    if (!value) {
+    if (!value.trim()) {
       throw new Error("Missing file name.");
     }
 
     if (!isJpegFileName(value)) {
       throw new Error("Only JPG files are supported.");
+    }
+
+    if (targetId === "upscale") {
+      if (/1920x1080/i.test(value)) return value.replace(/1920x1080/gi, SOURCE_TOKEN);
+      const extension = value.match(JPEG_EXTENSION_RE)[0];
+      const stem = value.slice(0, -extension.length);
+      return `${stem}${/16x9/i.test(stem) ? "" : "_16x9"}_${SOURCE_TOKEN}${extension}`;
     }
 
     if (!hasSourceToken(value)) {
@@ -105,9 +125,17 @@
     return renamed;
   }
 
-  function validateSourceDimensions(width, height) {
-    if (width !== SOURCE_WIDTH || height !== SOURCE_HEIGHT) {
-      throw new Error(`Source must be ${SOURCE_WIDTH}x${SOURCE_HEIGHT}. Found ${width}x${height}.`);
+  function validateSourceDimensions(width, height, direction = "shrink") {
+    getOutputTargets(direction);
+    const expectedWidth = direction === "upscale" ? TARGET_WIDTH : SOURCE_WIDTH;
+    const expectedHeight = direction === "upscale" ? TARGET_HEIGHT : SOURCE_HEIGHT;
+    if (width !== expectedWidth || height !== expectedHeight) {
+      const otherDirection = direction === "upscale" ? "Shrink" : "Upscale";
+      const oppositeMatch = direction === "upscale"
+        ? width === SOURCE_WIDTH && height === SOURCE_HEIGHT
+        : width === TARGET_WIDTH && height === TARGET_HEIGHT;
+      const hint = oppositeMatch ? ` Switch Direction to ${otherDirection} after clearing the queue.` : "";
+      throw new Error(`Source must be ${expectedWidth}x${expectedHeight}. Found ${width}x${height}.${hint}`);
     }
     return true;
   }
@@ -483,6 +511,7 @@
   return {
     APP_NAME,
     DISPLAY_NAME,
+    UPSCALE_DISPLAY_NAME,
     APP_VERSION,
     SOURCE_WIDTH,
     SOURCE_HEIGHT,
@@ -494,10 +523,12 @@
     TARGET_TOKEN,
     SQUARE_TARGET_TOKEN,
     OUTPUT_TARGETS,
+    UPSCALE_TARGET,
     buildOutputFileName,
     extractJpegMetadataSegments,
     formatBytes,
     getOutputTarget,
+    getOutputTargets,
     isJpegFileName,
     mergeJpegMetadata,
     validateSourceDimensions,

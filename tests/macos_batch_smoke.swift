@@ -56,9 +56,10 @@ class BatchSmokeDelegate: HISTIAppDelegate {
                 return
             }
             guard let status = value as? [String: Any] else { return }
-            if self.stage == "loading", status["version"] as? String == "V1.8" {
+            if self.stage == "loading", status["version"] as? String == "V1.9" {
                 self.stage = "selection"
-                let script = self.mode == "16x9" ? "document.getElementById('output-square').click()"
+                let script = self.mode == "upscale" ? "document.getElementById('direction-upscale').click()"
+                    : self.mode == "16x9" ? "document.getElementById('output-square').click()"
                     : self.mode == "1x1" ? "document.getElementById('output-landscape').click()" : "true"
                 self.webView.evaluateJavaScript(script) { _, error in
                     if let error = error { self.fail(error.localizedDescription) }
@@ -96,11 +97,12 @@ class BatchSmokeDelegate: HISTIAppDelegate {
         setbuf(stdout, nil)
         guard CommandLine.arguments.count == 4 else { fatalError("Expected fixture path, output path and mode") }
         let mode = CommandLine.arguments[3]
-        precondition(["both", "16x9", "1x1"].contains(mode))
+        precondition(["both", "16x9", "1x1", "upscale"].contains(mode))
         let output = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         // Also exercise replacement of an existing file through the normal save path.
-        let firstName = mode == "1x1" ? "ActionBible_051_1x1_3000x3000.jpg" : "ActionBible_051_16x9_1920x1080.jpg"
+        let firstName = mode == "upscale" ? "ActionBible_051_16x9_3840x2160.jpg"
+            : mode == "1x1" ? "ActionBible_051_1x1_3000x3000.jpg" : "ActionBible_051_16x9_1920x1080.jpg"
         try Data("previous output".utf8).write(to: output.appendingPathComponent(firstName))
         let delegate = BatchSmokeDelegate(fixtures: URL(fileURLWithPath: CommandLine.arguments[1]), output: output, mode: mode)
         let app = NSApplication.shared

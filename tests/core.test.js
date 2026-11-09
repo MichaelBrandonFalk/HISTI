@@ -3,8 +3,8 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
-test("exposes the V1.8 display metadata", () => {
-  assert.equal(core.APP_VERSION, "V1.8");
+test("exposes the V1.9 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.9");
   assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
 });
 
@@ -44,6 +44,52 @@ test("rejects non-jpg files", () => {
 test("validates exact 3840x2160 sources", () => {
   assert.equal(core.validateSourceDimensions(3840, 2160), true);
   assert.throws(() => core.validateSourceDimensions(1920, 1080), /3840x2160/);
+});
+
+test("keeps Shrink defaults and exposes a single exact Lanczos upscale target", () => {
+  assert.equal(core.UPSCALE_DISPLAY_NAME, "Honey, I blew up the images");
+  assert.equal(core.getOutputTargets().length, 2);
+  assert.deepEqual(core.getOutputTargets("upscale").map(({ id, width, height, mode }) => ({ id, width, height, mode })),
+    [{ id: "upscale", width: 3840, height: 2160, mode: "lanczos3" }]);
+  assert.throws(() => core.getOutputTargets("invalid"), /Unknown direction/);
+});
+
+test("upscale naming changes only the input dimension token", () => {
+  const name = "jep_and_jess_beyond_the_bayou_s01_e01_eng_bg_16x9_1920x1080.jpg";
+  assert.equal(core.buildOutputFileName(name, "upscale"), name.replace("1920x1080", "3840x2160"));
+  assert.equal(core.buildOutputFileName(" prefix_16X9_1920X1080.JPEG", "upscale"), " prefix_16X9_3840x2160.JPEG");
+  assert.equal(core.buildOutputFileName("1920x1080.jpg", "upscale"), "3840x2160.jpg");
+});
+
+test("upscale appends dimensions without duplicating an existing ratio", () => {
+  assert.equal(core.buildOutputFileName("ActionBible_86.jpg", "upscale"), "ActionBible_86_16x9_3840x2160.jpg");
+  assert.equal(core.buildOutputFileName("photo_16X9.JPEG", "upscale"), "photo_16X9_3840x2160.JPEG");
+  assert.throws(() => core.buildOutputFileName("sample.png", "upscale"), /JPG/);
+});
+
+test("validates direction-specific dimensions and explains opposite-direction skips", () => {
+  assert.equal(core.validateSourceDimensions(1920, 1080, "upscale"), true);
+  assert.throws(() => core.validateSourceDimensions(3840, 2160, "upscale"), /Switch Direction to Shrink/);
+  assert.throws(() => core.validateSourceDimensions(1920, 1080, "shrink"), /Switch Direction to Upscale/);
+  assert.throws(() => core.validateSourceDimensions(1280, 720, "upscale"), /1920x1080/);
+});
+
+test("upscale preserves JPEG metadata while rewriting XMP dimensions", () => {
+  const source = jpeg(segment(0xe0, ascii("JFIF\0same-density")), segment(0xfe, ascii("keep copyright")),
+    segment(0xe1, ascii('http://ns.adobe.com/xap/1.0/\0<rdf tiff:ImageWidth="1920" tiff:ImageLength="1080" exif:PixelXDimension="1920" exif:PixelYDimension="1080">keep owner</rdf>')));
+  const merged = core.mergeJpegMetadata(jpeg(segment(0xdb, new Uint8Array([0, 0]))), source, core.UPSCALE_TARGET);
+  const text = asciiFromBytes(merged);
+  for (const value of ["same-density", "keep copyright", "keep owner", 'tiff:ImageWidth="3840"', 'tiff:ImageLength="2160"', 'exif:PixelXDimension="3840"', 'exif:PixelYDimension="2160"']) assert.ok(text.includes(value), value);
+});
+
+test("upscale updates all supported EXIF dimensions without changing other bytes", () => {
+  const source = jpeg(exifSegment(1920, 1080));
+  const merged = core.mergeJpegMetadata(jpeg(segment(0xdb, new Uint8Array([0, 0]))), source, core.UPSCALE_TARGET);
+  const start = findSubarray(merged, ascii("Exif\0\0")) - 4;
+  for (const [offset, value] of [[8, 3840], [20, 2160], [50, 3840], [62, 2160]]) {
+    assert.equal(readLe32(merged, start + 10 + 8 + 2 + offset), value);
+  }
+  assert.deepEqual(merged.slice(start, start + exifSegment().length), exifSegment());
 });
 
 test("creates a readable stored ZIP blob", async () => {
@@ -181,7 +227,7 @@ function concat(parts) {
   return output;
 }
 
-function exifSegment() {
+function exifSegment(width = 3840, height = 2160) {
   const payload = new Uint8Array(6 + 80);
   payload.set(ascii("Exif\0\0"), 0);
   const tiff = 6;
@@ -192,15 +238,15 @@ function exifSegment() {
 
   const ifd0 = tiff + 8;
   writeLe16(payload, ifd0, 3);
-  writeEntry(payload, ifd0 + 2, 0x0100, 3840);
-  writeEntry(payload, ifd0 + 14, 0x0101, 2160);
+  writeEntry(payload, ifd0 + 2, 0x0100, width);
+  writeEntry(payload, ifd0 + 14, 0x0101, height);
   writeEntry(payload, ifd0 + 26, 0x8769, 50);
   writeLe32(payload, ifd0 + 38, 0);
 
   const exifIfd = tiff + 50;
   writeLe16(payload, exifIfd, 2);
-  writeEntry(payload, exifIfd + 2, 0xa002, 3840);
-  writeEntry(payload, exifIfd + 14, 0xa003, 2160);
+  writeEntry(payload, exifIfd + 2, 0xa002, width);
+  writeEntry(payload, exifIfd + 14, 0xa003, height);
   writeLe32(payload, exifIfd + 26, 0);
 
   return segment(0xe1, payload);
