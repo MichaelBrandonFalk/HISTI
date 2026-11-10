@@ -8,7 +8,7 @@ on:
         required: false
         type: string
   push:
-    branches: ['codex/histi-lanczos-publish-v1.9']
+    branches: ['codex/histi-lanczos-publish-v1.10']
 
 permissions:
   contents: write
@@ -75,13 +75,13 @@ jobs:
             Windows, Linux Mint, Mac and offline web downloads are included below.
 
             - Windows 10/11 (64-bit): run the Setup.exe installer, then open HISTI from the Start menu. The installer is unsigned.
-            - Linux Mint 21.x/22.x (64-bit): open the .deb in Package Installer, or install it with sudo apt install ./HISTI.V1_9.Linux.amd64.deb. Launch HISTI from the Graphics menu. No AppImage/FUSE setup is needed.
-            - Mac (Apple Silicon/Intel, macOS 12+): unzip and open HISTI v1.9.app. Ad-hoc signed, not Apple-notarized.
+            - Linux Mint 21.x/22.x (64-bit): open the .deb in Package Installer, or install it with sudo apt install ./HISTI.V1_10.Linux.amd64.deb. Launch HISTI from the Graphics menu. No AppImage/FUSE setup is needed.
+            - Mac (Apple Silicon/Intel, macOS 12+): unzip and open HISTI v1.10.app. Ad-hoc signed, not Apple-notarized.
             - Offline web: unzip and open index.html in a browser.
 
             All editions retain both output sizes by default, metadata handling, output toggles and skipped filenames/reasons. Desktop editions hide the app-download controls.
 
-            New: Honey, I blew up the images. Select Upscale to convert exactly 1920x1080 JPGs to 3840x2160 using offline Lanczos3, with no crop or added sharpening. Shrink remains the default. Clear the queue before switching directions. Upscale filenames replace 1920x1080 with 3840x2160, and JPEG metadata dimensions are updated.
+            Upscale now offers 3840x2160, 3000x3000, or both, with both enabled by default. Square output scales the height to 3000 with Lanczos3, then center-crops the width with no second interpolation or added sharpening. Filenames use the matching ratio and dimensions, and EXIF/XMP dimensions are updated per output. Output choices apply to queues, previews and downloads; completed outputs are cached. Shrink remains the default with independent preferences.
 
             Windows and both Linux compatibility checks installed the actual installers and tested 100-input Shrink and Upscale batches. Filenames, dimensions, ZIP CRCs, raw EXIF/XMP metadata, individual/ZIP saves and embedded source files were verified, along with independent Lanczos3 pixel comparisons. Linux testing used Ubuntu 22.04 and 24.04, the package bases of Mint 21.x and 22.x, rather than the Mint desktop itself.
 

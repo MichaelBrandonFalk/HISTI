@@ -1,6 +1,6 @@
 {
   "name": "histi",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
   "description": "Honey, I Shrunk the Images - bulk JPG resizing and square crops",
   "author": {
@@ -60,7 +60,7 @@
     "win": {
       "target": "nsis",
       "icon": "assets/histi_icon.png",
-      "artifactName": "HISTI.V1_9.Windows.Setup.exe"
+      "artifactName": "HISTI.V1_10.Windows.Setup.exe"
     },
     "nsis": {
       "oneClick": false,
@@ -68,8 +68,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "HISTI v1.9",
-      "uninstallDisplayName": "HISTI v1.9",
+      "shortcutName": "HISTI v1.10",
+      "uninstallDisplayName": "HISTI v1.10",
       "runAfterFinish": false
     },
     "linux": {
@@ -77,10 +77,10 @@
       "icon": "assets/histi_icon.png",
       "category": "Graphics",
       "executableName": "histi",
-      "artifactName": "HISTI.V1_9.Linux.amd64.deb",
+      "artifactName": "HISTI.V1_10.Linux.amd64.deb",
       "desktop": {
         "entry": {
-          "Name": "HISTI v1.9",
+          "Name": "HISTI v1.10",
           "Comment": "Honey, I Shrunk the Images"
         }
       }

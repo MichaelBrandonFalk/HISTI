@@ -6,8 +6,10 @@ const { crc32 } = require("../zip_store.js");
 const { metadataSegments } = require("./jpeg_checks.cjs");
 
 const [archive, fixtures, mode = "both"] = process.argv.slice(2);
-assert.ok(["both", "16x9", "1x1", "upscale"].includes(mode));
-const targets = mode === "upscale" ? [core.UPSCALE_TARGET] : core.OUTPUT_TARGETS.filter((target) => mode === "both" || target.id === mode);
+assert.ok(["both", "16x9", "1x1", "upscale", "upscale-landscape", "upscale-square"].includes(mode));
+const targets = mode.startsWith("upscale")
+  ? core.getOutputTargets("upscale").filter((target) => mode === "upscale" || target.id === (mode === "upscale-landscape" ? "upscale" : "upscale-square"))
+  : core.OUTPUT_TARGETS.filter((target) => mode === "both" || target.id === mode);
 const expected = new Map();
 for (const name of fs.readdirSync(fixtures).filter((name) => /\.jpg$/.test(name))) {
   for (const target of targets) expected.set(core.buildOutputFileName(name, target.id), { name, target });

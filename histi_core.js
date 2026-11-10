@@ -10,7 +10,7 @@
   const APP_NAME = "HISTI";
   const DISPLAY_NAME = "Honey, I Shrunk the Images";
   const UPSCALE_DISPLAY_NAME = "Honey, I blew up the images";
-  const APP_VERSION = "V1.9";
+  const APP_VERSION = "V1.10";
   const SOURCE_WIDTH = 3840;
   const SOURCE_HEIGHT = 2160;
   const TARGET_WIDTH = 1920;
@@ -51,6 +51,11 @@
     width: SOURCE_WIDTH, height: SOURCE_HEIGHT,
     ratioToken: SOURCE_RATIO_TOKEN, dimensionToken: SOURCE_TOKEN, mode: "lanczos3",
   };
+  const UPSCALE_SQUARE_TARGET = {
+    id: "upscale-square", label: "1x1 3000x3000",
+    width: SQUARE_TARGET_WIDTH, height: SQUARE_TARGET_HEIGHT,
+    ratioToken: SQUARE_RATIO_TOKEN, dimensionToken: SQUARE_TARGET_TOKEN, mode: "lanczos3",
+  };
   const MARKER_SOS = 0xda;
   const MARKER_EOI = 0xd9;
   const MARKER_COM = 0xfe;
@@ -77,6 +82,7 @@
 
   function getOutputTarget(targetId) {
     if (targetId === UPSCALE_TARGET.id) return UPSCALE_TARGET;
+    if (targetId === UPSCALE_SQUARE_TARGET.id) return UPSCALE_SQUARE_TARGET;
     const target = OUTPUT_TARGETS.find((candidate) => candidate.id === targetId);
     if (!target) {
       throw new Error(`Unknown output target: ${targetId}.`);
@@ -86,7 +92,7 @@
 
   function getOutputTargets(direction = "shrink") {
     if (direction === "shrink") return OUTPUT_TARGETS;
-    if (direction === "upscale") return [UPSCALE_TARGET];
+    if (direction === "upscale") return [UPSCALE_TARGET, UPSCALE_SQUARE_TARGET];
     throw new Error(`Unknown direction: ${direction}.`);
   }
 
@@ -102,11 +108,17 @@
       throw new Error("Only JPG files are supported.");
     }
 
-    if (targetId === "upscale") {
-      if (/1920x1080/i.test(value)) return value.replace(/1920x1080/gi, SOURCE_TOKEN);
+    if (targetId === "upscale" || targetId === "upscale-square") {
+      const square = targetId === "upscale-square";
+      if (/1920x1080/i.test(value)) {
+        const renamed = value.replace(/1920x1080/gi, target.dimensionToken);
+        return square ? renamed.replace(SOURCE_RATIO_TOKEN_RE, target.ratioToken) : renamed;
+      }
       const extension = value.match(JPEG_EXTENSION_RE)[0];
       const stem = value.slice(0, -extension.length);
-      return `${stem}${/16x9/i.test(stem) ? "" : "_16x9"}_${SOURCE_TOKEN}${extension}`;
+      const renamed = square ? stem.replace(SOURCE_RATIO_TOKEN_RE, target.ratioToken) : stem;
+      const hasRatio = /16x9/i.test(stem) || (square && /1x1/i.test(stem));
+      return `${renamed}${hasRatio ? "" : "_" + target.ratioToken}_${target.dimensionToken}${extension}`;
     }
 
     if (!hasSourceToken(value)) {
@@ -524,6 +536,7 @@
     SQUARE_TARGET_TOKEN,
     OUTPUT_TARGETS,
     UPSCALE_TARGET,
+    UPSCALE_SQUARE_TARGET,
     buildOutputFileName,
     extractJpegMetadataSegments,
     formatBytes,

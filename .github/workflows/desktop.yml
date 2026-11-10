@@ -3,7 +3,7 @@ name: Desktop packages
 on:
   workflow_dispatch:
   push:
-    branches: ['codex/histi-lanczos-upscale']
+    branches: ['codex/histi-dual-upscale']
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           $install = Join-Path $env:RUNNER_TEMP 'histi-installed'
-          $installer = Join-Path $pwd 'dist/HISTI.V1_9.Windows.Setup.exe'
+          $installer = Join-Path $pwd 'dist/HISTI.V1_10.Windows.Setup.exe'
           $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$install" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
           $executable = Join-Path $install 'HISTI.exe'
@@ -33,12 +33,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/desktop_smoke.cjs $executable
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/desktop_upscale_batch.cjs $executable
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($mode in @('both', 'landscape', 'square')) {
+            node tests/desktop_upscale_batch.cjs $executable $mode
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: histi-windows
-          path: dist/HISTI.V1_9.Windows.Setup.exe
+          path: dist/HISTI.V1_10.Windows.Setup.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
@@ -64,14 +66,16 @@ jobs:
       - name: Install DEB and test on Mint 21 package base
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ./dist/HISTI.V1_9.Linux.amd64.deb
+          sudo apt-get install -y xvfb ./dist/HISTI.V1_10.Linux.amd64.deb
           node scripts/verify_desktop.cjs /opt/HISTI/histi
           xvfb-run -a node tests/desktop_smoke.cjs /opt/HISTI/histi
-          xvfb-run -a node tests/desktop_upscale_batch.cjs /opt/HISTI/histi
+          for mode in both landscape square; do
+            xvfb-run -a node tests/desktop_upscale_batch.cjs /opt/HISTI/histi "$mode"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: histi-linux
-          path: dist/HISTI.V1_9.Linux.amd64.deb
+          path: dist/HISTI.V1_10.Linux.amd64.deb
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
@@ -100,10 +104,12 @@ jobs:
       - name: Install identical DEB and test on Mint 22 package base
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ./dist/HISTI.V1_9.Linux.amd64.deb
+          sudo apt-get install -y xvfb ./dist/HISTI.V1_10.Linux.amd64.deb
           node scripts/verify_desktop.cjs /opt/HISTI/histi
           xvfb-run -a node tests/desktop_smoke.cjs /opt/HISTI/histi
-          xvfb-run -a node tests/desktop_upscale_batch.cjs /opt/HISTI/histi
+          for mode in both landscape square; do
+            xvfb-run -a node tests/desktop_upscale_batch.cjs /opt/HISTI/histi "$mode"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

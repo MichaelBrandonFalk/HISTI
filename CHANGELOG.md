@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.10 - 2026-11-10
+
+- Added independent 3840x2160 and 3000x3000 Upscale outputs, both enabled by default.
+- Square upscales use Lanczos3 to reach 3000px height, then copy an integer-centered 3000x3000 crop without another resampling pass.
+- Applied output choices to existing queues, processing, cached outputs, previews, counts and downloads; preserved separate Shrink preferences.
+- Added square upscale filenames and dimension-specific metadata updates, plus independent crop-reference and 100-image checks for both/single output modes.
+- Updated the browser, Mac, Windows and Linux Mint packages from the same versioned source.
+
 ## V1.9 - 2026-11-09
 
 - Added the "Honey, I blew up the images" Upscale direction for exactly 1920x1080 JPGs to 3840x2160.

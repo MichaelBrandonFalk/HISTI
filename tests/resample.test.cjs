@@ -25,8 +25,34 @@ test("upscale explicitly selects Lanczos3, no sharpening and no native resize fa
 test("rejects incorrect upscale dimensions and missing resampler rather than silently degrading", async () => {
   const resampler = createResampler(undefined);
   await assert.rejects(resampler.upscale({ width: 3840, height: 2160 }, { width: 3840, height: 2160 }), /requires/);
-  await assert.rejects(resampler.upscale({ width: 1920, height: 1080 }, { width: 3000, height: 3000 }), /requires/);
+  await assert.rejects(resampler.upscale({ width: 1920, height: 1080 }, { width: 2500, height: 2500 }), /requires/);
   await assert.rejects(resampler.upscale({ width: 1920, height: 1080 }, { width: 3840, height: 2160 }), /could not be loaded/);
+});
+
+test("square upscale scales height to 3000 then copies an integer centered crop without interpolation", async () => {
+  const staged = { width: 0, height: 0 };
+  const calls = [];
+  const context = { imageSmoothingEnabled: true, drawImage: (...args) => calls.push(args) };
+  const destination = { width: 3000, height: 3000, getContext: () => context };
+  const source = { width: 1920, height: 1080 };
+  const resampler = createResampler(() => ({ resize: async (image, canvas, options) => {
+    assert.equal(image, source);
+    assert.equal(canvas, staged);
+    assert.deepEqual([canvas.width, canvas.height], [5334, 3000]);
+    assert.deepEqual(options, { filter: "lanczos3", unsharpAmount: 0 });
+  } }), () => staged);
+  assert.equal(await resampler.upscale(source, destination), destination);
+  assert.equal(context.imageSmoothingEnabled, false);
+  assert.deepEqual(calls[0].slice(1), [1167, 0, 3000, 3000, 0, 0, 3000, 3000]);
+  assert.equal(calls[0][0], staged);
+  assert.deepEqual([staged.width, staged.height], [0, 0]);
+});
+
+test("square upscale releases the temporary pixel buffer when resampling fails", async () => {
+  const staged = {};
+  const resampler = createResampler(() => ({ resize: async () => { throw new Error("test failure"); } }), () => staged);
+  await assert.rejects(resampler.upscale({ width: 1920, height: 1080 }, { width: 3000, height: 3000 }), /test failure/);
+  assert.deepEqual([staged.width, staged.height], [0, 0]);
 });
 
 test("vendored Lanczos3 matches an independent sinc-kernel reference, including edges", async () => {

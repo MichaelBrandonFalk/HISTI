@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>HISTI V1.9</title>
-    <meta name="description" content="HISTI shrinks 3840x2160 JPGs into 1920x1080 and 3000x3000, or upscales 1920x1080 JPGs to 3840x2160 using Lanczos3, in bulk.">
+    <title>HISTI V1.10</title>
+    <meta name="description" content="HISTI shrinks 3840x2160 JPGs, or upscales 1920x1080 JPGs to 3840x2160 and 3000x3000 using Lanczos3, in bulk.">
     <link rel="icon" type="image/png" href="assets/histi_icon.png">
     <link rel="apple-touch-icon" href="assets/histi_icon.png">
     <link rel="manifest" href="site.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=1.9">
+    <link rel="stylesheet" href="styles.css?v=1.10">
   </head>
   <body>
     <div class="app-shell">
@@ -16,15 +16,15 @@
         <div class="brand-lockup">
           <img class="brand-icon" src="assets/histi_icon.png" alt="">
           <div>
-            <p class="eyebrow">HISTI <span data-version>V1.9</span></p>
+            <p class="eyebrow">HISTI <span data-version>V1.10</span></p>
             <h1 id="display-name">Honey, I Shrunk the Images</h1>
           </div>
         </div>
         <nav class="download-links" aria-label="Download desktop app">
-          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.macOS.zip">Download Mac V1.9</a>
-          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.Windows.Setup.exe">Download Windows V1.9</a>
-          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.Linux.amd64.deb">Download Linux Mint V1.9</a>
-          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.web.zip">Download Offline Web V1.9</a>
+          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.10/HISTI.V1_10.macOS.zip">Download Mac V1.10</a>
+          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.10/HISTI.V1_10.Windows.Setup.exe">Download Windows V1.10</a>
+          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.10/HISTI.V1_10.Linux.amd64.deb">Download Linux Mint V1.10</a>
+          <a class="button-link app-download" href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.10/HISTI.V1_10.web.zip">Download Offline Web V1.10</a>
         </nav>
       </header>
 
@@ -51,7 +51,11 @@
           <label><input id="output-landscape" type="checkbox" data-output-target="16x9" checked> 1920x1080 (16x9)</label>
           <label><input id="output-square" type="checkbox" data-output-target="1x1" checked> 3000x3000 (1x1)</label>
         </fieldset>
-        <p id="upscale-output" class="fixed-output" hidden><span>Output</span> <strong>3840x2160 (16x9), Lanczos3</strong></p>
+        <fieldset id="upscale-output" class="output-options" hidden>
+          <legend>Outputs (Lanczos3)</legend>
+          <label><input id="upscale-landscape" type="checkbox" data-output-target="upscale" checked> 3840x2160 (16x9)</label>
+          <label><input id="upscale-square" type="checkbox" data-output-target="upscale-square" checked> 3000x3000 (1x1)</label>
+        </fieldset>
 
         <progress id="batch-progress" class="batch-progress" aria-label="Batch progress" value="0" max="1" hidden></progress>
 
@@ -90,6 +94,7 @@
             </div>
             <div id="upscale-rules" class="rule-strip" aria-label="Upscale rule" hidden>
               <div class="rule-row"><span>16x9</span><code>1920x1080 -> 3840x2160</code></div>
+              <div class="rule-row"><span>1x1</span><code>height 3000 -> center crop</code></div>
             </div>
           </div>
 
@@ -145,8 +150,8 @@
       <section class="docs">
         <h2>Honey, I blew up the images</h2>
         <div>
-          <p>Upscale converts exactly 1920x1080 JPGs to 3840x2160 with the bundled Lanczos3 resampler. There is no crop or added sharpening. The dimension token changes from <code>1920x1080</code> to <code>3840x2160</code>; other filename text is preserved.</p>
-          <p>Sources without a size token receive <code>_16x9_3840x2160</code>. JPEG metadata is retained with dimensions updated. Clear the queue before changing direction. Lanczos resamples existing detail; it does not generate new detail with AI.</p>
+          <p>Upscale converts exactly 1920x1080 JPGs to 3840x2160, 3000x3000, or both with Lanczos3. Both outputs are enabled by default. The square output scales the height to 3000px, then center-crops the width to 3000px. No sharpening is added.</p>
+          <p>The 16x9 name replaces <code>1920x1080</code> with <code>3840x2160</code>; the square name changes <code>16x9_1920x1080</code> to <code>1x1_3000x3000</code>. Sources without a size token receive the matching ratio and size suffix. JPEG metadata is retained with dimensions updated. Clear the queue before changing direction. Lanczos resamples existing detail; it does not generate new detail with AI.</p>
         </div>
       </section>
 
@@ -174,11 +179,11 @@
       <section class="docs">
         <h2>Desktop Apps</h2>
         <div>
-          <p>Unzip the Mac download, move <code>HISTI v1.9.app</code> to Applications, and open it. Supports Apple Silicon and Intel Macs running macOS 12 or later.</p>
+          <p>Unzip the Mac download, move <code>HISTI v1.10.app</code> to Applications, and open it. Supports Apple Silicon and Intel Macs running macOS 12 or later.</p>
           <p>This release is not Apple-notarized. If macOS blocks the first launch, use System Settings &gt; Privacy &amp; Security &gt; Open Anyway.</p>
-          <p>Windows: run <code>HISTI.V1_9.Windows.Setup.exe</code>, then open HISTI from the Start menu. For 64-bit Windows 10 or 11. The installer is unsigned.</p>
-          <p>Linux Mint: open <code>HISTI.V1_9.Linux.amd64.deb</code> in Package Installer, install it, then open HISTI from the Graphics menu. For 64-bit Mint 21.x and 22.x. No AppImage or FUSE setup is needed.</p>
-          <p><a href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.9/HISTI.V1_9.web.zip">Offline web files V1.9</a> are also available.</p>
+          <p>Windows: run <code>HISTI.V1_10.Windows.Setup.exe</code>, then open HISTI from the Start menu. For 64-bit Windows 10 or 11. The installer is unsigned.</p>
+          <p>Linux Mint: open <code>HISTI.V1_10.Linux.amd64.deb</code> in Package Installer, install it, then open HISTI from the Graphics menu. For 64-bit Mint 21.x and 22.x. No AppImage or FUSE setup is needed.</p>
+          <p><a href="https://github.com/MichaelBrandonFalk/HISTI/releases/download/v1.10/HISTI.V1_10.web.zip">Offline web files V1.10</a> are also available.</p>
         </div>
       </section>
 
@@ -201,7 +206,7 @@
       </section>
 
       <footer>
-        HISTI V1.9. Source and releases are published at
+        HISTI V1.10. Source and releases are published at
         <a href="https://github.com/MichaelBrandonFalk/HISTI">github.com/MichaelBrandonFalk/HISTI</a>.
       </footer>
     </div>
@@ -218,10 +223,10 @@
       </section>
     </div>
 
-    <script src="histi_core.js?v=1.9"></script>
-    <script src="zip_store.js?v=1.9"></script>
-    <script src="vendor/pica.min.js?v=1.9"></script>
-    <script src="histi_resample.js?v=1.9"></script>
-    <script src="app.js?v=1.9"></script>
+    <script src="histi_core.js?v=1.10"></script>
+    <script src="zip_store.js?v=1.10"></script>
+    <script src="vendor/pica.min.js?v=1.10"></script>
+    <script src="histi_resample.js?v=1.10"></script>
+    <script src="app.js?v=1.10"></script>
   </body>
 </html>

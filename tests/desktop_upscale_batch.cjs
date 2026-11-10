@@ -7,7 +7,11 @@ const core = require("../histi_core.js");
 const { withMetadata } = require("./upscale_fixture.cjs");
 const { metadataSegments } = require("./jpeg_checks.cjs");
 const root = path.resolve(__dirname, "..");
-const output = path.join(root, "output", "desktop-upscale", process.platform);
+const mode = process.argv[3] || "both";
+assert.ok(["both", "landscape", "square"].includes(mode));
+const targets = core.getOutputTargets("upscale").filter((target) => mode === "both" || target.id === (mode === "landscape" ? "upscale" : "upscale-square"));
+const screenshots = path.join(root, "output", "desktop-upscale", process.platform);
+const output = path.join(screenshots, mode);
 const fixtures = path.join(output, "fixtures");
 fs.mkdirSync(fixtures, { recursive: true });
 
@@ -20,8 +24,10 @@ async function main() {
       globalThis.upscaleErrors = [];
       dialog.showErrorBox = (title, message) => globalThis.upscaleErrors.push(`${title}: ${message}`);
     });
-    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.9");
+    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.10");
     await page.locator("#direction-upscale").check();
+    if (mode === "landscape") await page.locator("#upscale-square").uncheck();
+    if (mode === "square") await page.locator("#upscale-landscape").uncheck();
     const jpeg = Buffer.from(await page.evaluate(() => {
       const canvas = document.createElement("canvas");
       canvas.width = 1920; canvas.height = 1080;
@@ -42,13 +48,13 @@ async function main() {
     const png = path.join(fixtures, "skipped.png");
     fs.writeFileSync(png, "not a JPG");
     await page.locator("#file-input").setInputFiles([...paths, png]);
-    assert.equal(await page.locator("#results-body tr").count(), 101);
+    assert.equal(await page.locator("#results-body tr").count(), 100 * targets.length + 1);
     assert.equal(await page.locator("#error-count").textContent(), "1");
     assert.ok(await page.locator("#direction-shrink").isDisabled());
-    console.log("Upscaling 100 JPGs with Lanczos3...");
+    console.log(`Upscaling 100 JPGs with Lanczos3 (${mode})...`);
     await page.locator("#process-button").click();
-    await page.waitForFunction(() => document.querySelector("#ready-count").textContent === "100"
-      && document.querySelector("#process-button").textContent === "Process", null, { timeout: 600000 });
+    await page.waitForFunction((count) => document.querySelector("#ready-count").textContent === String(count)
+      && document.querySelector("#process-button").textContent === "Process", 100 * targets.length, { timeout: 600000 });
     await application.evaluate(({ BrowserWindow }, directory) => {
       globalThis.upscaleDownloads = [];
       BrowserWindow.getAllWindows()[0].webContents.session.on("will-download", (_event, item) => {
@@ -67,15 +73,16 @@ async function main() {
     };
     await page.locator("#download-all-button").click();
     await waitForSaves(1);
-    execFileSync(process.execPath, [path.join(__dirname, "verify_batch_zip.js"), path.join(output, "HISTI_V1_9_upscaled_outputs.zip"), fixtures, "upscale"], { stdio: "inherit" });
+    execFileSync(process.execPath, [path.join(__dirname, "verify_batch_zip.js"), path.join(output, "HISTI_V1_10_upscaled_outputs.zip"), fixtures, mode === "both" ? "upscale" : `upscale-${mode}`], { stdio: "inherit" });
     console.log("Verified upscale ZIP; saving an individual JPG...");
     await page.locator("#results-body button").first().click();
     await waitForSaves(2);
-    const fileName = core.buildOutputFileName(path.basename(paths[0]), "upscale");
-    assert.deepEqual(metadataSegments(fs.readFileSync(path.join(output, fileName))), core.extractJpegMetadataSegments(source, core.UPSCALE_TARGET).map((segment) => Uint8Array.from(segment)));
+    const fileName = core.buildOutputFileName(path.basename(paths[0]), targets[0].id);
+    assert.deepEqual(metadataSegments(fs.readFileSync(path.join(output, fileName))), core.extractJpegMetadataSegments(source, targets[0]).map((segment) => Uint8Array.from(segment)));
     console.log("Verified individual upscale JPG; capturing the workspace...");
-    await page.screenshot({ path: path.join(output, "histi-upscale.png") });
+    await page.screenshot({ path: path.join(screenshots, `histi-upscale-${mode}.png`) });
     await page.locator("#clear-button").click();
+    if (mode === "both") await page.locator("#upscale-square").uncheck();
     await page.locator("#file-input").setInputFiles([paths[1]]);
     await page.locator("#process-button").click();
     await page.waitForFunction(() => document.querySelector("#ready-count").textContent === "1"
@@ -84,7 +91,7 @@ async function main() {
     await page.locator("#download-all-button").click();
     await waitForSaves(3);
     assert.ok((await application.evaluate(() => globalThis.upscaleDownloads)).at(-1).name.endsWith(".jpg"), "One upscale output must save as JPG, not ZIP");
-    console.log("PASS: 100 Lanczos upscales, 4K dimensions, exact filenames, raw EXIF/XMP/comment preservation, native ZIP/JPG saves and single-output Download All");
+    console.log(`PASS: ${mode}: 100 sources, ${100 * targets.length} Lanczos outputs, correct dimensions/names, raw EXIF/XMP/comment preservation, native ZIP/JPG saves and single-output Download All`);
   } finally { await application.close(); }
 }
 

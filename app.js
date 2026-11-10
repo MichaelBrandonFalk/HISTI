@@ -12,7 +12,7 @@
     processing: false,
     direction: "shrink",
     showSkipped: false,
-    enabledTargets: new Set(core.OUTPUT_TARGETS.map((target) => target.id)),
+    enabledTargets: new Set([...core.OUTPUT_TARGETS, ...core.getOutputTargets("upscale")].map((target) => target.id)),
   };
   let nextItemId = 1;
   let nextSourceId = 1;
@@ -216,11 +216,11 @@
   }
 
   function isEnabledItem(item) {
-    return !item.targetId || item.targetId === "upscale" || state.enabledTargets.has(item.targetId);
+    return !item.targetId || state.enabledTargets.has(item.targetId);
   }
 
   function hasEnabledTargets() {
-    return state.direction === "upscale" || state.enabledTargets.size > 0;
+    return core.getOutputTargets(state.direction).some((target) => state.enabledTargets.has(target.id));
   }
 
   function renderDirection() {
@@ -245,7 +245,7 @@
   }
 
   function changeOutputOptions() {
-    if (state.processing || state.direction !== "shrink") return;
+    if (state.processing) return;
     state.enabledTargets = new Set(refs.outputOptions.filter((input) => input.checked)
       .map((input) => input.dataset.outputTarget));
     refs.progress.hidden = true;
@@ -253,7 +253,7 @@
     const outputs = readyItems();
     showPreview(outputs.at(-1));
     if (state.pendingItems.length > 0) refs.queueSummary.textContent = selectionSummary(state.pendingItems);
-    if (state.enabledTargets.size === 0) {
+    if (!hasEnabledTargets()) {
       setStatus("Select at least one output size.", "warn");
     } else if (state.items.length === 0) {
       setStatus("Select one or more JPG files.", "");
@@ -506,7 +506,7 @@
         refs.progress.value = completed;
         setStatus(`Building ZIP: ${completed} of ${outputs.length} outputs...`, "ready");
       });
-      downloadBlob(blob, state.direction === "upscale" ? "HISTI_V1_9_upscaled_outputs.zip" : "HISTI_V1_9_outputs.zip");
+      downloadBlob(blob, state.direction === "upscale" ? "HISTI_V1_10_upscaled_outputs.zip" : "HISTI_V1_10_outputs.zip");
       setStatus(`${outputs.length} output files zipped.`, "success");
     } catch (error) {
       setStatus(error.message || "Could not build ZIP.", "error");

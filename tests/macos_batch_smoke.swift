@@ -5,7 +5,7 @@ class BatchSmokeDelegate: HISTIAppDelegate {
     let fixtures: URL
     let outputDirectory: URL
     let mode: String
-    var expectedOutputs: Int { mode == "both" ? 200 : 100 }
+    var expectedOutputs: Int { ["both", "upscale"].contains(mode) ? 200 : 100 }
     private var started = Date()
     private var stage = "loading"
     private var timer: Timer?
@@ -56,7 +56,7 @@ class BatchSmokeDelegate: HISTIAppDelegate {
                 return
             }
             guard let status = value as? [String: Any] else { return }
-            if self.stage == "loading", status["version"] as? String == "V1.9" {
+            if self.stage == "loading", status["version"] as? String == "V1.10" {
                 self.stage = "selection"
                 let script = self.mode == "upscale" ? "document.getElementById('direction-upscale').click()"
                     : self.mode == "16x9" ? "document.getElementById('output-square').click()"

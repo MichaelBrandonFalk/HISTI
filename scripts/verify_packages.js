@@ -6,8 +6,8 @@ const { execFileSync } = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const files = require("../package.json").build.extraResources[0].filter;
 const packages = [
-  ["HISTI.V1_9.macOS.zip", "HISTI v1.9.app/Contents/Resources/site"],
-  ["HISTI.V1_9.web.zip", "HISTI V1_9 Web"],
+  ["HISTI.V1_10.macOS.zip", "HISTI v1.10.app/Contents/Resources/site"],
+  ["HISTI.V1_10.web.zip", "HISTI V1_10 Web"],
 ];
 
 for (const [name, prefix] of packages) {

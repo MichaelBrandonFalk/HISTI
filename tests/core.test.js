@@ -3,8 +3,8 @@ const test = require("node:test");
 const core = require("../histi_core.js");
 const zip = require("../zip_store.js");
 
-test("exposes the V1.9 display metadata", () => {
-  assert.equal(core.APP_VERSION, "V1.9");
+test("exposes the V1.10 display metadata", () => {
+  assert.equal(core.APP_VERSION, "V1.10");
   assert.equal(core.DISPLAY_NAME, "Honey, I Shrunk the Images");
 });
 
@@ -46,11 +46,12 @@ test("validates exact 3840x2160 sources", () => {
   assert.throws(() => core.validateSourceDimensions(1920, 1080), /3840x2160/);
 });
 
-test("keeps Shrink defaults and exposes a single exact Lanczos upscale target", () => {
+test("keeps Shrink defaults and exposes both exact Lanczos upscale targets", () => {
   assert.equal(core.UPSCALE_DISPLAY_NAME, "Honey, I blew up the images");
   assert.equal(core.getOutputTargets().length, 2);
   assert.deepEqual(core.getOutputTargets("upscale").map(({ id, width, height, mode }) => ({ id, width, height, mode })),
-    [{ id: "upscale", width: 3840, height: 2160, mode: "lanczos3" }]);
+    [{ id: "upscale", width: 3840, height: 2160, mode: "lanczos3" },
+      { id: "upscale-square", width: 3000, height: 3000, mode: "lanczos3" }]);
   assert.throws(() => core.getOutputTargets("invalid"), /Unknown direction/);
 });
 
@@ -65,6 +66,14 @@ test("upscale appends dimensions without duplicating an existing ratio", () => {
   assert.equal(core.buildOutputFileName("ActionBible_86.jpg", "upscale"), "ActionBible_86_16x9_3840x2160.jpg");
   assert.equal(core.buildOutputFileName("photo_16X9.JPEG", "upscale"), "photo_16X9_3840x2160.JPEG");
   assert.throws(() => core.buildOutputFileName("sample.png", "upscale"), /JPG/);
+});
+
+test("square upscale changes only ratio and dimensions, including plain filenames", () => {
+  assert.equal(core.buildOutputFileName("jep_and_jess_16x9_1920x1080.jpg", "upscale-square"), "jep_and_jess_1x1_3000x3000.jpg");
+  assert.equal(core.buildOutputFileName(" leading_16X9_1920X1080.JPEG", "upscale-square"), " leading_1x1_3000x3000.JPEG");
+  assert.equal(core.buildOutputFileName("photo.jpg", "upscale-square"), "photo_1x1_3000x3000.jpg");
+  assert.equal(core.buildOutputFileName("photo_16x9.jpg", "upscale-square"), "photo_1x1_3000x3000.jpg");
+  assert.equal(core.buildOutputFileName("photo_1x1.jpg", "upscale-square"), "photo_1x1_3000x3000.jpg");
 });
 
 test("validates direction-specific dimensions and explains opposite-direction skips", () => {

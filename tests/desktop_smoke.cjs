@@ -20,7 +20,7 @@ async function main() {
   });
   try {
     const page = await application.firstWindow({ timeout: 60000 });
-    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.9");
+    await page.waitForFunction(() => window.HISTI_CORE?.APP_VERSION === "V1.10");
     const security = await application.evaluate(({ BrowserWindow }) => {
       const options = BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences();
       return { sandbox: options.sandbox, contextIsolation: options.contextIsolation, nodeIntegration: options.nodeIntegration };
@@ -84,7 +84,7 @@ async function main() {
       });
     }, output);
     await page.locator("#download-all-button").click();
-    const zipPath = path.join(output, "HISTI_V1_9_outputs.zip");
+    const zipPath = path.join(output, "HISTI_V1_10_outputs.zip");
     for (let i = 0; ; i += 1) {
       const saved = await application.evaluate(() => globalThis.histiTestDownloads);
       if (saved.some((file) => file.name.endsWith(".zip") && file.state === "completed")) break;
